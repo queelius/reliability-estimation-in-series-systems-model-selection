@@ -1,0 +1,644 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage[numbers]{natbib}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+% Custom commands
+\renewcommand{\v}[1]{\boldsymbol{#1}}
+
+% Theorem environments
+\newtheorem{theorem}{Theorem}[section]
+
+% Title and author information
+\title{Model Selection for Reliability Estimation in Series Systems}
+\author{
+  \Large{Alex Towell} \\
+  \href{mailto:lex@metafunctor.com}{lex@metafunctor.com}
+}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This paper explores model selection for reliability estimation of components in series systems using Weibull distributions. We assess the sensitivity of a likelihood model based on right-censored and masked failure data to deviations from well-designed systems where components have similar failure characteristics. We compare a full model with heterogeneous component shape parameters against a reduced model assuming homogeneous shapes, which renders the system Weibull and reduces parameters from $2m$ to $m+1$. Appropriateness of the reduced model is assessed using likelihood ratio tests across varying sample sizes and component configurations. For well-designed systems, the reduced model maintains excellent fit even with sample sizes exceeding 10,000 observations, requiring approximately 30,000 observations before rejection in 95\% of simulations. Deviations in individual component scale or shape parameters quickly provide evidence against the reduced model. Maximum likelihood estimators demonstrate sensitivity to system design but remain robust under moderate masking and censoring. Proper model specification requires balancing simplicity against representativeness based on system characteristics and available data.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+Estimating reliability of individual components in multi-component systems is challenging when only system-level failure data is observable. A likelihood model incorporating right-censoring and candidate sets was previously developed to enable component inference from such masked data \cite{towell2023reliability}. Simulation studies revealed estimator behavior and sensitivity to modeling assumptions given limited samples.
+
+A key question is choosing an appropriate model complexity. A reduced model assuming homogeneous component shapes simplifies analysis as the system becomes Weibull. However, deviations in component properties impact adequacy. Proper model specification requires balancing simplicity against representativeness.
+
+This paper explores model selection for component reliability estimation in series systems. The likelihood model from \cite{towell2023reliability} is summarized. Simulation studies demonstrate estimator sensitivity and assess reduced model appropriateness using likelihood ratio tests. Findings provide guidance on suitable models based on system design and available data.
+
+The remainder of this paper is organized as follows. Section 2 presents mathematical preliminaries including formal notation, series system definitions, Weibull distribution properties, and foundational theorems. Section 3 summarizes the likelihood model for masked and censored data. Section 4 presents simulation studies assessing estimator sensitivity to system design variations. Section 5 introduces the reduced homogeneous shape model and evaluates its appropriateness using likelihood ratio tests. Section 6 concludes with practical guidance on model selection.
+
+\section{Mathematical Preliminaries}
+
+\subsection{Notation and System Structure}
+
+Consider a series system composed of $m$ components, where the system fails when any single component fails. We observe $n$ independent and identically distributed system lifetimes. For the $i$-th system ($i = 1, \ldots, n$), let $T_{ij}$ denote the lifetime of component $j$ ($j = 1, \ldots, m$). The system lifetime is given by
+\begin{equation}
+T_i = \min\{T_{i1}, T_{i2}, \ldots, T_{im}\}.
+\end{equation}
+
+We denote the complete parameter vector by $\v\theta = (k_1, \lambda_1, k_2, \lambda_2, \ldots, k_m, \lambda_m)$, where $k_j > 0$ is the shape parameter and $\lambda_j > 0$ is the scale parameter for component $j$. Bold symbols represent vectors throughout this paper.
+
+\subsection{Weibull Distribution}
+
+Each component lifetime follows a two-parameter Weibull distribution with probability density function
+\begin{equation}
+f_j(t; \lambda_j, k_j) = \frac{k_j}{\lambda_j}\left(\frac{t}{\lambda_j}\right)^{k_j-1} \exp\left\{-\left(\frac{t}{\lambda_j}\right)^{k_j}\right\}, \quad t > 0,
+\end{equation}
+reliability function
+\begin{equation}
+R_j(t; \lambda_j, k_j) = \exp\left\{-\left(\frac{t}{\lambda_j}\right)^{k_j}\right\},
+\end{equation}
+and hazard function
+\begin{equation}
+h_j(t; \lambda_j, k_j) = \frac{k_j}{\lambda_j}\left(\frac{t}{\lambda_j}\right)^{k_j-1}.
+\end{equation}
+
+The mean time to failure (MTTF) for a Weibull-distributed component is
+\begin{equation}
+\label{eq:mttf-weibull}
+\text{MTTF}_j = \lambda_j \Gamma\left(1 + \frac{1}{k_j}\right),
+\end{equation}
+where $\Gamma(\cdot)$ is the gamma function. The shape parameter $k_j$ characterizes the failure mode:
+\begin{itemize}
+\item If $k_j < 1$, the hazard function decreases with time, indicating infant mortality or early-life failures.
+\item If $k_j = 1$, the hazard function is constant, corresponding to an exponential distribution with memoryless failures.
+\item If $k_j > 1$, the hazard function increases with time, indicating wear-out or aging failures.
+\end{itemize}
+
+\subsection{Data Structure}
+
+The observed data for each system $i$ consists of:
+\begin{itemize}
+\item \textbf{Observed system lifetime} $t_i$: The time at which system $i$ fails or is censored.
+\item \textbf{Censoring indicator} $\delta_i$: Equals 1 if system $i$ failed and 0 if right-censored.
+\item \textbf{Candidate set} $C_i \subseteq \{1, 2, \ldots, m\}$: For failed systems ($\delta_i = 1$), the set of components that could have caused the failure. For censored systems, $C_i$ is undefined.
+\end{itemize}
+
+This data structure is termed \emph{masked data} because the true component cause of failure is not directly observed but is known to belong to the candidate set $C_i$. The masking mechanism assumes that:
+\begin{enumerate}
+\item The candidate set always contains the true failed component.
+\item Given the system failure time and the true failed component, the masking is non-informative (i.e., all candidate sets containing that component are equally likely).
+\end{enumerate}
+
+\subsection{Well-Designed Systems}
+
+A \emph{well-designed series system} is characterized by components having similar but not necessarily identical failure characteristics. Operationally, we define a well-designed system as one where:
+\begin{enumerate}
+\item Component MTTFs are of similar magnitude (within a factor of 2-3).
+\item Component shape parameters are reasonably aligned (within approximately 20-30\% of each other).
+\item No single component dominates as a weak point (i.e., component failure probabilities are relatively balanced).
+\end{enumerate}
+
+This concept is important for assessing the appropriateness of reduced models that assume parameter homogeneity.
+
+\subsection{Series System Theorems}
+
+The following theorems characterize the lifetime distribution of series systems with independent component lifetimes.
+
+\begin{theorem}[Series System Lifetime]
+\label{thm:sys_lifetime}
+For a series system of $m$ independent components, the system lifetime $T$ is given by
+$$
+T = \min\{T_1, T_2, \ldots, T_m\},
+$$
+where $T_j$ is the lifetime of component $j$.
+\end{theorem}
+
+\begin{theorem}[Series System Reliability Function]
+\label{thm:sys_reliability_function}
+The reliability function of a series system with $m$ independent components is
+$$
+R(t; \v\theta) = \prod_{j=1}^{m} R_j(t; \lambda_j, k_j),
+$$
+where $R_j(t; \lambda_j, k_j)$ is the reliability function of component $j$.
+\end{theorem}
+
+\begin{theorem}[Series System Hazard Function]
+\label{thm:sys_failure_rate}
+The hazard function of a series system with $m$ independent components is
+$$
+h(t; \v\theta) = \sum_{j=1}^{m} h_j(t; \lambda_j, k_j),
+$$
+where $h_j(t; \lambda_j, k_j)$ is the hazard function of component $j$.
+\end{theorem}
+
+For series systems with Weibull components, these theorems yield specific forms presented in the following subsection.
+
+\subsection{Series Systems with Weibull Components}
+
+Applying Theorems \ref{thm:sys_reliability_function}, \ref{thm:sys_failure_rate}, and \ref{thm:sys_lifetime} to series systems with Weibull-distributed components yields specific analytical forms for the system lifetime distribution.
+
+The lifetime of the series system composed of $m$ Weibull components has a reliability function given by
+\begin{equation}
+\label{eq:sys_weibull_reliability_function}
+R(t;\v\theta) = \exp\biggl\{-\sum_{j=1}^{m}\biggl(\frac{t}{\lambda_j}\biggr)^{k_j}\biggr\}.
+\end{equation}
+\begin{proof}
+By Theorem \ref{thm:sys_reliability_function},
+$$
+R(t;\v\theta) = \prod_{j=1}^{m} R_j(t;\lambda_j,k_j).
+$$
+Plugging in the Weibull component reliability functions obtains the result
+\begin{align*}
+R(t;\v\theta)
+    &= \prod_{j=1}^{m} \exp\biggl\{-\biggl(\frac{t}{\lambda_j}\biggr)^{k_j}\biggr\}\\
+    &= \exp\biggl\{-\sum_{j=1}^{m}\biggl(\frac{t}{\lambda_j}\biggr)^{k_j}\biggr\}.
+\end{align*}
+\end{proof}
+
+The Weibull series system's hazard function is given by
+\begin{equation}
+\label{eq:sys_weibull_failure_rate_function}
+h(t;\v\theta) =
+    \sum_{j=1}^{m} \frac{k_j}{\lambda_j}\biggl(\frac{t}{\lambda_j}\biggr)^{k_j-1},
+\end{equation}
+whose proof follows from Theorem \ref{thm:sys_failure_rate}.
+
+The pdf of the series system is given by
+\begin{equation}
+\label{eq:sys_weibull_pdf}
+f(t;\v\theta) =
+\biggl\{
+    \sum_{j=1}^m \frac{k_j}{\lambda_j}\left(\frac{t}{\lambda_j}\right)^{k_j-1}
+\biggr\}
+\exp
+\biggl\{
+    -\sum_{j=1}^m \bigl(\frac{t}{\lambda_j}\bigr)^{k_j}
+\biggr\}.
+\end{equation}
+
+When components have heterogeneous shape parameters, the series system hazard function can exhibit complex behavior, including both infant mortality (initial decrease) and aging (eventual increase) phases. This bathtub-shaped hazard is commonly observed in engineered systems where early failures due to defects give way to a period of stable operation, eventually followed by wear-out failures.
+
+\subsection{Baseline Series System Configuration}
+
+Throughout this paper, we use a baseline 5-component series system configuration for simulation studies. The component parameters are specified in Table \ref{tab:series-sys}.
+
+\begin{table}[htbp]
+\centering
+\caption{Baseline 5-Component Well-Designed Series System Parameters}
+\label{tab:series-sys}
+\begin{tabular}{cccc}
+\hline
+Component $j$ & Shape $k_j$ & Scale $\lambda_j$ & MTTF$_j$ \\
+\hline
+1 & 1.2576 & 994.37 & $\approx 913$ \\
+2 & 1.1635 & 908.95 & $\approx 859$ \\
+3 & 1.1308 & 840.11 & $\approx 799$ \\
+4 & 1.1802 & 940.13 & $\approx 886$ \\
+5 & 1.2034 & 923.16 & $\approx 866$ \\
+\hline
+\end{tabular}
+\end{table}
+
+This baseline system represents a \emph{well-designed} series system configuration. All components have similar MTTFs ranging from approximately 799 to 913 time units, ensuring no single component dominates as a weak point. The shape parameters are tightly clustered between 1.13 and 1.26, all indicating slight aging behavior ($k_j > 1$) with similar failure characteristics. Component 3, with shape parameter $k_3 = 1.1308$, has the smallest shape value and serves as a reference point for sensitivity analyses. This configuration is ideal for assessing the appropriateness of the reduced homogeneous-shape model, as the components already exhibit substantial similarity in their failure modes.
+
+\subsection{Component Failure Probabilities}
+
+In series systems, a critical quantity for understanding system behavior and estimator performance is the probability that a particular component causes system failure. Let $K_i$ denote the index of the component that causes the $i$-th system to fail. The probability that component $j$ is the cause of failure is given by:
+
+\begin{equation}
+\label{eq:component_failure_prob}
+P_j = \Pr\{K_i = j\} = \int_{0}^\infty f_{T_i, K_i}(t, j ; \v\theta) \, dt,
+\end{equation}
+
+\noindent where $f_{T_i, K_i}(t, j ; \v\theta)$ is the joint density of system lifetime $T_i$ and component cause $K_i$. This can be expressed as:
+
+\begin{equation}
+\label{eq:component_failure_prob_hazard}
+P_j = \int_{0}^\infty f_j(t; \theta_j) R_{\setminus j}(t; \v\theta_{\setminus j}) \, dt = E_{\v\theta}\left\{ \frac{h_j(T_i;\theta_j)}{h(T_i;\v\theta)} \right\},
+\end{equation}
+
+\noindent where $f_j(t; \theta_j)$ is the PDF of component $j$, $R_{\setminus j}(t; \v\theta_{\setminus j}) = \prod_{k \neq j} R_k(t; \theta_k)$ is the reliability of all components except $j$, and $h(t; \v\theta)$ is the system hazard function.
+
+For Weibull components in series, the component failure probability depends on both shape and scale parameters in a complex, non-linear manner. A key insight is that MTTF alone is insufficient for determining failure probabilities in series systems with heterogeneous shape parameters.
+
+\subsubsection*{Relationship Between Shape Parameter and Failure Probability}
+
+When components have different shape parameters, counter-intuitive relationships can arise. Consider a component with shape parameter $k_j < 1$ (decreasing hazard, infant mortality). Such a component may have a \emph{higher} MTTF than components with $k > 1$, yet simultaneously have a \emph{higher} probability of causing system failure. This occurs because:
+
+\begin{itemize}
+\item Components with $k < 1$ have high early failure rates (infant mortality), making them likely to fail first despite long-term survivors having extended lifetimes.
+\item Components with $k > 1$ have low early failure rates but increasing hazards (aging), making them less likely to fail first despite lower MTTFs.
+\item The first failure determines series system lifetime, so early hazard behavior dominates MTTF considerations.
+\end{itemize}
+
+This phenomenon has important implications for MLE behavior and bias patterns. The estimator must balance fitting the observed failure times with correctly attributing failures to the appropriate components. When a component with $k_j < 1$ dominates early failures, the MLE may exhibit bias in shape parameters of other components to compensate for limited information about their failure characteristics.
+
+\subsubsection*{Implications for Estimation}
+
+The component failure probabilities $P_j$ directly influence the information available for estimating each component's parameters:
+
+\begin{enumerate}
+\item \textbf{High failure probability:} Components with higher $P_j$ are observed as the cause of failure more frequently, providing more information for parameter estimation. This typically results in lower estimator variance and better coverage probabilities for that component's parameters.
+
+\item \textbf{Low failure probability:} Components with lower $P_j$ are rarely observed as the cause of failure. Parameter estimates for these components have higher variance, wider confidence intervals, and potentially worse coverage properties.
+
+\item \textbf{Masking effects:} Candidate sets that include multiple components dilute the information about which component actually failed. The impact is more severe for components with already low $P_j$.
+\end{enumerate}
+
+Throughout the simulation studies in Section~\ref{sec:simulation-study}, we examine how varying shape and scale parameters affects component failure probabilities and, consequently, estimator performance. Understanding these relationships is essential for interpreting the sensitivity analyses and model selection results that follow.
+
+\section{Likelihood Model}
+
+This section summarizes the likelihood model for component reliability estimation from masked and right-censored system failure data, as developed in \cite{towell2023reliability}. The key challenge is that only system-level failure times are observed, not individual component failures, and the component cause of failure may be partially masked.
+
+\subsection{Model Framework}
+
+For the $i$-th system ($i = 1, \ldots, n$), the observed data consists of:
+\begin{itemize}
+\item System failure or censoring time $t_i$
+\item Censoring indicator $\delta_i \in \{0, 1\}$
+\item Candidate set $C_i \subseteq \{1, 2, \ldots, m\}$ (for failed systems only)
+\end{itemize}
+
+Let $K_i \in \{1, \ldots, m\}$ denote the (unobserved) component cause of failure for system $i$. The likelihood contribution for a single observation depends on whether the system failed or was censored.
+
+\subsection{Likelihood Function Structure}
+
+For a censored observation ($\delta_i = 0$), the likelihood contribution is simply the system reliability function evaluated at the censoring time:
+\begin{equation}
+L_i(\v\theta | t_i, \delta_i = 0) = R(t_i; \v\theta) = \prod_{j=1}^{m} \exp\left\{-\left(\frac{t_i}{\lambda_j}\right)^{k_j}\right\}.
+\end{equation}
+
+For a failed system ($\delta_i = 1$) with candidate set $C_i$, the likelihood contribution accounts for the fact that the failed component is known to be in $C_i$ but is otherwise unknown:
+\begin{equation}
+L_i(\v\theta | t_i, \delta_i = 1, C_i) = \sum_{j \in C_i} \Pr\{K_i = j | t_i, \v\theta\} \cdot f(t_i; \v\theta),
+\end{equation}
+where the conditional probability that component $j$ failed given system failure time $t_i$ is
+\begin{equation}
+\Pr\{K_i = j | t_i, \v\theta\} = \frac{h_j(t_i; \lambda_j, k_j)}{h(t_i; \v\theta)} = \frac{h_j(t_i; \lambda_j, k_j)}{\sum_{\ell=1}^{m} h_\ell(t_i; \lambda_\ell, k_\ell)}.
+\end{equation}
+
+The complete log-likelihood for the sample of $n$ systems is
+\begin{equation}
+\ell(\v\theta | D) = \sum_{i=1}^{n} \left[ (1-\delta_i) \log R(t_i; \v\theta) + \delta_i \log \left( \sum_{j \in C_i} \Pr\{K_i = j | t_i, \v\theta\} \cdot f(t_i; \v\theta) \right) \right].
+\end{equation}
+
+\subsection{Key Assumptions}
+
+The likelihood model relies on the following assumptions:
+\begin{enumerate}
+\item \textbf{Independence}: System lifetimes are independent and identically distributed.
+\item \textbf{Series structure}: The system fails when the first component fails.
+\item \textbf{Weibull components}: Each component lifetime follows a two-parameter Weibull distribution.
+\item \textbf{Candidate set validity}: For failed systems, the candidate set $C_i$ always contains the true failed component, i.e., $K_i \in C_i$.
+\item \textbf{Non-informative masking}: Given the system failure time $t_i$ and the true failed component $K_i$, the masking mechanism that determines $C_i$ is non-informative about the parameters $\v\theta$.
+\end{enumerate}
+
+\subsection{Maximum Likelihood Estimation}
+
+Maximum likelihood estimates are obtained by maximizing the log-likelihood function $\ell(\v\theta | D)$ with respect to $\v\theta$. Due to the complexity of the likelihood surface with $2m$ parameters, numerical optimization is required. The optimization is performed using the L-BFGS-B algorithm \cite{byrd1995}, which handles box constraints on the parameters (all shape and scale parameters must be positive).
+
+Previous simulation studies \cite{towell2023reliability} demonstrated that maximum likelihood estimation produces accurate results despite small samples and significant masking and censoring. However, shape parameters exhibit greater variability and are more challenging to estimate precisely than scale parameters, particularly when candidate sets are large or when certain components rarely fail.
+
+\section{Simulation Study: Sensitivity Analysis to Changing System Design}
+\label{sec:simulation-study}
+
+This section presents simulation studies assessing the sensitivity of maximum likelihood estimators to deviations from the baseline system configuration. We examine how changes in individual component parameters affect estimator performance, bias, dispersion, and coverage probability.
+
+\subsection{Simulation Methodology}
+
+For each simulation scenario, we employ the following methodology:
+\begin{itemize}
+\item \textbf{Number of replications}: 1000 Monte Carlo replications per parameter configuration
+\item \textbf{Sample size}: $n = 100$ systems per replication (unless otherwise specified)
+\item \textbf{Masking probability}: $p = 0.215$ (moderate masking, unless otherwise specified)
+\item \textbf{Censoring mechanism}: Right-censoring at the $q = 0.825$ quantile of the system lifetime distribution (moderate censoring, unless otherwise specified)
+\item \textbf{Candidate set generation}: For each failed system, components are independently included in the candidate set with probability $p$, ensuring the true failed component is always included
+\item \textbf{Optimization}: L-BFGS-B algorithm \cite{byrd1995} with box constraints requiring all parameters to be positive
+\item \textbf{Confidence intervals}: Bias-corrected and accelerated (BCa) bootstrap confidence intervals \cite{efron1987better} with 2000 bootstrap samples per replication, targeting 95\% nominal coverage
+\item \textbf{Performance metrics}: Bias, dispersion (interquartile range of point estimates), coverage probability, and confidence interval width
+\end{itemize}
+
+The term \emph{moderate} refers to levels that are substantial enough to pose estimation challenges but not so extreme as to make inference infeasible. Specifically, a masking probability of 0.215 results in candidate sets containing approximately 2-3 components on average, and a censoring quantile of 0.825 censors approximately 17.5\% of observations.
+
+\subsection{Scenario: Assessing the Impact of Changing the Scale Parameter of Component 3}
+\label{scale-vs-mttf}
+
+By Equation \ref{eq:mttf-weibull}, we see that MTTF$_j$ is proportional to the scale parameter $\lambda_j$, which means when we decrease the scale parameter of a component, we proportionally decrease the MTTF. In this scenario, we start with the well-designed series system described in Table \ref{tab:series-sys}, and we will manipulate the MTTF of component 3, MTTF$_3$, by changing its scale parameter, $\lambda_3$, and observing the effect this has on the MLE. Since the other components had a similiar MTTF, we will arbitrarily choose component 1 to represent the other components. The bottom plot shows the coverage probabilities for all parameters.
+
+In Figure \ref{fig:mttf-vs-ci}, we show the effect of changing the scale parameter of component $3$, $lambda_3$, but map $\lambda_3$ to MTTF$_3$ to make it more intuitive to reason about. We vary the MTTF of component 3 from $300$ to $1500$ and the other components have their MTTFs fixed at around $900$, as shown in Table \ref{tab:series-sys}. We fix the masking probability to $p = 0.215$ (moderate masking), the right-censoring quantile to $q = 0.825$ (moderate censoring), and the sample size to $n = 100$ (moderate sample size).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{image/5_system_mttf3_by_scale3.pdf}
+\caption{MTTF of Component 3 vs MLE By Varying Scale}
+\label{fig:mttf-vs-ci}
+\end{figure}
+
+\subsubsection*{Key Observations}
+
+\paragraph{Coverage Probability (CP)}
+When MTTF of component 3 is much smaller than other components, the CP for $k_3$ is very well calibrated (approximately obtaining the nominal level $95\%$) while the CP for other componentns are around $90\%$, which is still reasonable. (This is the case even though the width of the CI for $k_3$ is extremely narrow compared to the others). As MTTF$_3$ increases, the CP for $k_3$ decreases, while the CP for the other components increase slightly. The scale parameters are generally well-calibrated for all of the components, except for component 3 when its MTTF is large and it dips down to $90\%$. Despite the individual differences, the mean of the CPs for shape and scale parameters hardly change.
+
+\paragraph{Dispersion of MLEs}
+For component 3, as its MTTF decreases, the dispersion of MLEs narrows, indicating more precise estimates. Conversely, dispersion for other components widens. As MTTF of component 3 increases, its dispersion widens while others narrow. This is consistent with the fact that the smaller MTTF of component 3 means that, in this well-designed system at least, it is more likely to be the component cause of failure, and so we have more information about its parameters and are able to estimate them more accurately.
+
+\paragraph{IQR of Bootstrapped CIs}
+The dark blue vertical lines representing IQR are consistent with the dispersion of MLEs, which is the ideal behavior, and suggests that the BCa confidence intervals are performing well.
+
+\paragraph{Bias of MLEs}
+For component 3, the bias of MLE for the scale parameter becomes slightly more negatively biased as MTTF$_3$ increases, and the bias of the MLE for the shape parameter becomes slightly more positively biased. The MLE for the shape and scale parameters for component 1 have a very small bias, if any, and are not affected by the MTTF$_3$. The scale parameters are easier to estimate than the shape parameters, and so they are less sensitive to changes in scale than the shape parameters, as we will show in the next scenario.
+
+\subsection{Scenario: Assessing the Impact of Changing the Shape Parameter of Component 3}
+\label{shape3-vary}
+
+The shape parameter determines the failure characteristics. We vary the shape paramenter of component 3 from $0.1$ to $3.5$ and observe the effect it has on the MLE. When $k_3 < 1$, this indicates infant mortality, and when $k_3 > 1$, this indicates wear-out failures.
+
+We analyze the effect of component 3's shape parameter on the MLE and the bootstrapped confidence intervals for the shape and scale parameters of components 1 and 3 (the component we are varying). First, we look at the effect on the scale parameter.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{image/5_system_shape3_fig.pdf}
+\caption{Probability of Component 3 Failure vs MLE}
+\label{fig:prob3-vs-mle}
+\end{figure}
+
+\subsubsection*{Key Observations}
+
+\paragraph{Coverage Probability (CP)}
+The CP for the scale parameters are well-calibrated and close to the nominal level of $0.95$ for all values of $\Pr\{K_i = 3\}$. For the the shape parameter of component 3 ($k_3$) in bold orange colors, we see that it is well-calibrated for all values of $\Pr\{K_i = 3\}$, but actually may become too large for extreme values of $\Pr\{K_i = 3\}$. The CP for the shape parameters of the other components decreases with $\Pr\{K_i = 3\}$, dipping below $90\%$ for $\Pr\{K_i = 3\} > 0.4$. At a sample size of $n = 100$, the CP for the shape parameters of the other components is generally not well-calibrated for $\Pr\{K_i = 3\} > 0.4$.
+
+\paragraph{Dispersion of MLEs}
+The dispersion of the MLE for the shape and scale parameters of component 1, $k_1$ and $\lambda_1$, is fairly steady but begins to increase rapdily at the extreme values of $\Pr\{K_i = 3\}$. This is indicative of having less information about the failure characteristcs of component $1$ as component $3$ begins to dominate the component cause of failure. The dispersion of the shape parameter $k_3$ is initially quite large, indicative of having very little information about the failure characteristcs of component 3 since it is unlikely to be the component cause of failure, but its dispersion rapidly decreases as $\Pr\{K_i = 3\}$ increases and more information is available about component 3's failure characteristics. In fact, it nearly becomes a point at $\Pr\{K_i = 3\} = 0.6$. The dispersion of the the scale parameter of component $3$, $\lambda_3$, is quite steady and is less spread out than the MLE for $\lambda_1$, but at extreme values of $\Pr\{K_i = 3\}$, it also begins to rapidly increase, suggesting some complex interactions between the shape and scale parameters of component 3.
+
+\paragraph{IQR of Bootstrapped CIs}
+The CIs precisely track the dispersion of the MLEs, which is the ideal behavior, and suggests that the BCa confidence intervals are performing well.
+
+\paragraph{Bias of MLEs}
+The MLE for the scale parameters are nearly unbiased and generally seem unaffected by changes in $\Pr\{K_i = 3\}$. As $\Pr\{K_i = 3\}$ increases the MLE is adjusting $k_1$ to be more positively biased, decreasing its infant morality rate to make it less likely to be the component cause of failure, and adjusting $k_3$ to be less positively biased, increasing its infant mortality rate, to make it more likely to be the component cause of failure.
+
+\section{Weibull Series Homogenous Shape Model}
+
+In the sensitivity analysis in Section~\ref{sec:simulation-study}, we found that the MLE is very sensitive to deviations from a well-designed system. In this section, we develop a reduced model that assumes homogeneity in the shape parameters of the components, which simplifies analysis and reduces estimator variability.
+
+Here, our focus shifts to a sensitivity analysis aimed at understanding when it is appropriate to use the reduced model that assumes homogeneity in the shape parameters of the components. The reduced model offers interpretability (the series system is itself Weibull) and reduced estimator variability (only $m+1$ parameters instead of $2m$), but it must adequately describe the data.
+
+\subsection{Homogeneous Shape Model Definition}
+
+The \emph{homogeneous shape model} (also called the \emph{reduced model}) assumes that all components share a common shape parameter $k$ while retaining individual scale parameters $\lambda_j$. The parameter vector for the reduced model is
+\begin{equation}
+\v\theta_R = (k, \lambda_1, \lambda_2, \ldots, \lambda_m),
+\end{equation}
+reducing the number of parameters from $2m$ in the full model to $m+1$ in the reduced model.
+
+Under this assumption, each component has a Weibull lifetime with
+\begin{equation}
+T_{ij} \sim \text{Weibull}(k, \lambda_j), \quad j = 1, \ldots, m.
+\end{equation}
+
+A key property of the homogeneous shape model is that the series system lifetime distribution is itself Weibull. Specifically, for the system lifetime $T_i = \min\{T_{i1}, \ldots, T_{im}\}$, we have
+\begin{equation}
+T_i \sim \text{Weibull}\left(k, \lambda_s\right),
+\end{equation}
+where the system scale parameter is given by
+\begin{equation}
+\lambda_s = \left(\sum_{j=1}^{m} \lambda_j^{-k}\right)^{-1/k}.
+\end{equation}
+
+This Weibull property of the system lifetime provides several advantages:
+\begin{enumerate}
+\item \textbf{Analytical tractability}: System reliability metrics (MTTF, reliability function, hazard function) have closed-form expressions.
+\item \textbf{Interpretability}: The system exhibits a single failure mode characterized by the common shape parameter $k$.
+\item \textbf{Reduced variance}: Fewer parameters to estimate results in lower estimator variance, particularly for the shape parameter.
+\item \textbf{Computational efficiency}: Optimization is faster with $m+1$ parameters instead of $2m$ parameters.
+\end{enumerate}
+
+However, the reduced model is appropriate only when components genuinely have similar failure characteristics. When component shape parameters differ substantially, forcing homogeneity can lead to poor model fit and biased parameter estimates.
+
+\subsection{Assessing the Appropriateness of the Reduced Model}
+
+In order to determine if a reduced model (e.g., Weibull series system in which all of the shape parameters are homogeneous) is appropriate, a hypothesis test test may be conducted to determine if there is statistically significant evidence in support of the null hypothesis $H_0$, e.g., that all of the shape parameters are homogeneous.
+
+The likelihood function of the reduced model is related to the likelihood function of the full model. We denote the full model likelihood function by $L_F$ and the reduced model likelihood by $L_R$. The reduced model is obtained by setting the shape parameter of each component to be the same, i.e., $k_1 = \cdots = k_m = k$. Thus, the reduced model likelihood function is given by
+$$
+L_R(k, \lambda_1, \lambda_2, \cdots, \lambda_m | D) =
+        L_F(k, \lambda_1, k, \lambda_2, \ldots, k, \lambda_m | D),
+$$
+The same may be done for the score and hessian of the log-likelihood functions.
+
+Given that we employ a well-defined likelihood model, the likelihood ratio test (LRT) is a good choice. The LRT statistic is given by
+$$
+\Lambda = -2 (\log L_R(\hat\theta_R | D) - \log L_F(\hat\theta | D))
+$$
+where $L_R$ is the likelihood of the reduced (null) model evaluated at its MLE $\hat\theta_R$ given a random sample $D$ of masked data and $L_F$ is the likelihood of the full model evaluated at its MLE $\hat\theta$ given the same set of data $D$. Under the null model, the LRT statistic is asymptotically distributed chi-squared with $m-1$ degrees of freedom, where $m$ is the number of components in the series system,
+$$
+\Lambda \sim \chi^2_{m-1}.
+$$
+If the LRT statistic is greater than the critical value of the chi-squared distribution with $m-1$ degrees of freedom, $\chi^2_{m-1, 1-\alpha}$, where $\alpha$ denotes the significance level, then we find the data to be incompatible with the null hypothesis $H_0$.
+
+\subsection{Simulation Study: Full Weibull Model vs Reduced (Homogenous Shape) Model}
+\label{full-vs-reduced}
+
+We aim to assess the appropriateness of the reduced model under varying sample sizes and shape parameters of the third component ($k_3$). We employ a simulation study using the likelihood ratio test (LRT) for this purpose, where the null hypothesis, $H_0$, assumes homogenous shape parameters.
+
+We take the well-designed series system described in Table \ref{tab:series-sys}, and manipulate the shape parameter of the third component ($k_3$) to cause the components to have different failure characteristics. Recall that $k_3 = 1.1308$ corresponds to a \emph{well-designed} series system, where component shapes are reasonably aligned. We also vary the sample size $n$ to assess the impact of sample size on the appropriateness of the reduced model.
+
+Figure \ref{fig:lrt-contour} provides a contour plot with varying sample sizes along the $x$-axis, shape of component 3 along the $y$-axis, and median $p$-value along the color scale. The contour lines corresponding to $p$-values of $0.05$ and $0.1$ are often used as a threshold for statistical significance. Points outside of these contours in dark blue are indicative of significant evidence against the null model and points inside of these contours in light blue for $0.1$ and green for $0.05$ are indicative of insufficient evidence against the null model.
+
+Figure \ref{fig:lrt-samp-size} provides a plot of the median $p$-value against the sample size for the well-designed system, where the shape parameter of component 3 is fixed at $1.1308$. The $95$th percentile of the $p$-values is also provided as a more stringent criterion for statistical significance.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{.5\textwidth}
+        \centering
+        \includegraphics[width=1\linewidth]{image/fig-lrt/contour_plot.pdf}
+        \captionof{figure}{$p$-Value vs Sample Size and Shape $k_3$}
+        \label{fig:lrt-contour}
+    \end{minipage}%
+    \begin{minipage}{.5\textwidth}
+        \centering
+        \includegraphics[width=1\linewidth]{image/fig-lrt/n-vs-p-value.pdf}
+        \captionof{figure}{$p$-Value vs Sample Size for Well-Designed System}
+        \label{fig:lrt-samp-size}
+    \end{minipage}
+\end{figure}
+
+\subsubsection*{Sensitivity to Sample Size ($n$)}
+
+\begin{itemize}
+\item The sample size is an essential aspect of hypothesis testing, as it affects the test's power, which is the probability of correctly rejecting the null hypothesis when it is false. In the contour plot in Figure \ref{fig:lrt-contour}, as $n$ increases, the contours trend lower. This indicates that larger samples result in smaller median $p$-values, implying that the power of the LRT increases with the sample size. However, its power is quite low for small samples, particularly for values of $k_3$ somewhat close to the shape parameters of the other components in the system.
+
+\item Recall that in the well-designed series system, $k_3 = 1.1308$. In this case, even very large sample sizes do not produce evidence against the null model, indicating robust compatibility.
+
+\item In Figure \ref{fig:lrt-samp-size}, we fix $k_3$ at $1.1308$ and vary the sample size. The median $p$-value only manages to drop below the $0.05$ theshold with sample sizes around $10000$. In the more stringent criterion given by the $95$th percentile of the $p$-values, nearly $30000$ observations are necessary to reject the null hypothesis in $95\%$ of the simulations.
+\end{itemize}
+
+\subsubsection*{Sensivity to Shape Parameter ($k_3$)}
+
+\begin{itemize}
+\item In Figure \ref{fig:lrt-contour}, for a given shape parameter, increasing the sample size tends to decrease the median $p$-value. Larger samples provide more information about the parameters, which increases the power of the LRT.
+
+\item The median $p$-values in the vicinity of the line $k_3 = 1.1308$ are high across various sample sizes, indicating that the null model is a good fit. As $k_3$ deviates from this line, the median $p$-value diminishes, indicating increasing evidence against the null model.
+\end{itemize}
+
+\subsection{Implications and Recommendations}
+
+The power of the test for a well-designed series system is quite low, requiring many thousands of observations before the test has sufficient power to reject the null hypothesis. But, this is not necessarily a bad thing. The reduced model is quite simple and interpretable, and is by definition a good fit for a well-designed series system.
+
+The findings suggest that the reduced model is particularly apt when the system is well-designed, even for very large samples. Practitioners should weigh the trade-offs between the simplicity of the reduced model and the adequacy in describing the data, with consideration of the available sample size and the characteristics of the system being modeled.
+
+For systems believed to be well-designed, employing the null model is supported both statistically and practically due to its simplicity, reduced estimator variability, and analytical tractability. In the absence of prior information, or if the shape parameter significantly diverges from the well-designed value, the choice between models should be undertaken with caution. More complex models may be favorable, especially with large sample sizes.
+
+\section{Conclusion}
+
+In this study, we employed simulation techniques and Likelihood Ratio Tests (LRTs) to assess the adequacy and sensitivity of Maximum Likelihood Estimators (MLEs) for reliability assessment in 5-component series systems with Weibull component lifetimes. Two main models were examined: a more complex model with heterogeneous shape parameters and a reduced model assuming homogeneous shape parameters for all components.
+
+The reduced model improves interpretability by rendering the system Weibull and reduces estimator variability, thus appearing statistically and practically favorable for well-designed systems. These well-designed systems are characterized by similar but non-identical failure characteristics among components, without a single weak point. Even for large samples, the reduced model showed excellent fit in these cases.
+
+However, our simulations revealed that varying a single component's scale or shape parameter quickly provided evidence against the reduced model's adequacy. This suggests that more complex models may be preferable in systems with divergent component properties or when sample sizes are large.
+
+Estimator performance was found to be sensitive but robust, particularly concerning the challenges introduced by limited, right-censored, and masked failure data. Bootstrap confidence intervals proved valuable in characterizing estimator uncertainty. As the sample size increased, estimator dispersion reduced, and confidence intervals narrowed, although small samples exhibited bias, particularly in shape parameters. Masking probability also played a role, expanding confidence intervals to maintain coverage while largely leaving scale parameters unbiased.
+
+In summary, the choice between the reduced and more complex models should weigh the trade-offs between simplicity and representativeness. Our findings offer practical guidance for reliability assessments, particularly when dealing with limited system failure data. Proper model specification ultimately requires a nuanced understanding of both system characteristics and estimator behavior.
+
+\appendix
+
+\section{Parameter Sensitivity Analysis Tables}
+\label{app:sensitivity-tables}
+
+This appendix provides detailed tables quantifying the relationships between Weibull parameters and component failure probabilities for a simplified 3-component series system. These tables present \emph{illustrative pedagogical examples}, not results from the 5-component simulation studies in the main text. The simplified 3-component system allows clear demonstration of the complex, non-linear relationships between shape parameters, scale parameters, mean time to failure (MTTF), and the probability of each component causing system failure. These examples support the theoretical discussions in Section 2 about counterintuitive failure probability patterns.
+
+\subsection{Effect of Varying Shape Parameter}
+
+Table \ref{tab:vary-shape} shows the effect of varying the shape parameter of component 1 ($k_1$) from 0.1 to 1.0 while holding $k_2 = k_3 = 0.5$ and all scale parameters at $\lambda_1 = \lambda_2 = \lambda_3 = 1$.
+
+\begin{table}[htbp]
+\centering
+\caption{Effect of Varying Shape Parameter $k_1$ on Failure Probabilities and MTTFs}
+\label{tab:vary-shape}
+\small
+\begin{tabular}{ccccccccc}
+\hline
+$k_1$ & $P_1$ & $P_2$ & $P_3$ & MTTF$_1$ & MTTF$_2$ & MTTF$_3$ & System MTTF \\
+\hline
+0.10 & 0.77 & 0.12 & 0.12 & 10.00 & 2.00 & 2.00 & 0.89 \\
+0.20 & 0.69 & 0.15 & 0.15 & 4.59 & 2.00 & 2.00 & 1.02 \\
+0.30 & 0.64 & 0.18 & 0.18 & 3.32 & 2.00 & 2.00 & 1.10 \\
+0.40 & 0.59 & 0.20 & 0.20 & 2.68 & 2.00 & 2.00 & 1.17 \\
+0.50 & 0.55 & 0.22 & 0.22 & 2.29 & 2.00 & 2.00 & 1.22 \\
+0.60 & 0.52 & 0.24 & 0.24 & 2.03 & 2.00 & 2.00 & 1.27 \\
+0.70 & 0.48 & 0.26 & 0.26 & 1.85 & 2.00 & 2.00 & 1.31 \\
+0.80 & 0.45 & 0.27 & 0.27 & 1.71 & 2.00 & 2.00 & 1.34 \\
+0.90 & 0.42 & 0.29 & 0.29 & 1.61 & 2.00 & 2.00 & 1.38 \\
+1.00 & 0.40 & 0.30 & 0.30 & 1.53 & 2.00 & 2.00 & 1.41 \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Key observations from Table \ref{tab:vary-shape}:}
+
+\begin{itemize}
+\item As $k_1$ increases from 0.1 to 1.0, the failure probability $P_1$ decreases from 0.77 to 0.40, while $P_2$ and $P_3$ increase proportionally.
+\item Component 1 has the \emph{highest} MTTF when $k_1 = 0.1$ (MTTF$_1 = 10.0$), yet also has the \emph{highest} failure probability ($P_1 = 0.77$). This counter-intuitive result demonstrates that MTTF alone is insufficient for predicting failure probabilities in series systems with heterogeneous shape parameters.
+\item The shape parameter dominates early hazard behavior. Components with $k < 1$ exhibit high infant mortality, making them likely to fail first despite having longer MTTFs than components with $k > 1$.
+\item System MTTF increases as $k_1$ approaches 1.0, reflecting reduced infant mortality in the overall system.
+\end{itemize}
+
+\subsection{Effect of Varying Scale Parameter}
+
+Table \ref{tab:vary-scale} shows the effect of varying the scale parameter of component 1 ($\lambda_1$) from 1 to 4 while holding all shape parameters at $k_1 = k_2 = k_3 = 0.5$ and $\lambda_2 = \lambda_3 = 1$.
+
+\begin{table}[htbp]
+\centering
+\caption{Effect of Varying Scale Parameter $\lambda_1$ on Failure Probabilities and MTTFs}
+\label{tab:vary-scale}
+\small
+\begin{tabular}{ccccccccc}
+\hline
+$\lambda_1$ & $P_1$ & $P_2$ & $P_3$ & MTTF$_1$ & MTTF$_2$ & MTTF$_3$ & System MTTF \\
+\hline
+1.0 & 0.55 & 0.22 & 0.22 & 2.00 & 2.00 & 2.00 & 1.22 \\
+2.0 & 0.35 & 0.32 & 0.32 & 4.00 & 2.00 & 2.00 & 1.72 \\
+3.0 & 0.25 & 0.38 & 0.38 & 6.00 & 2.00 & 2.00 & 1.98 \\
+4.0 & 0.20 & 0.40 & 0.40 & 8.00 & 2.00 & 2.00 & 2.14 \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Key observations from Table \ref{tab:vary-scale}:}
+
+\begin{itemize}
+\item Unlike the shape parameter, the scale parameter exhibits a more intuitive relationship: as $\lambda_1$ increases, MTTF$_1$ increases proportionally and $P_1$ decreases.
+\item When shape parameters are homogeneous ($k_1 = k_2 = k_3 = 0.5$), the component with the largest scale parameter has the lowest failure probability, and MTTF is directly proportional to the scale parameter.
+\item System MTTF increases with $\lambda_1$, but at a decreasing rate due to the series configuration (weakest link).
+\item This more linear relationship makes scale parameters easier to estimate than shape parameters, which is consistent with observations in the simulation studies.
+\end{itemize}
+
+\subsection{Joint Variation of Shape and Scale Parameters}
+
+Table \ref{tab:vary-both} shows the joint effect of varying both $k_1$ and $\lambda_1$ simultaneously, demonstrating the complex interactions between these parameters.
+
+\begin{table}[htbp]
+\centering
+\caption{Joint Effect of Varying Both $k_1$ and $\lambda_1$ on Failure Probabilities}
+\label{tab:vary-both}
+\small
+\begin{tabular}{cccccccccc}
+\hline
+$k_1$ & $\lambda_1$ & $P_1$ & $P_2$ & $P_3$ & MTTF$_1$ & MTTF$_2$ & MTTF$_3$ & System MTTF \\
+\hline
+0.25 & 1.0 & 0.64 & 0.18 & 0.18 & 3.63 & 2.00 & 2.00 & 1.10 \\
+0.25 & 2.0 & 0.50 & 0.25 & 0.25 & 7.26 & 2.00 & 2.00 & 1.43 \\
+0.25 & 3.0 & 0.41 & 0.29 & 0.29 & 10.89 & 2.00 & 2.00 & 1.62 \\
+0.50 & 1.0 & 0.55 & 0.22 & 0.22 & 2.00 & 2.00 & 2.00 & 1.22 \\
+0.50 & 2.0 & 0.35 & 0.32 & 0.32 & 4.00 & 2.00 & 2.00 & 1.72 \\
+0.50 & 3.0 & 0.25 & 0.38 & 0.38 & 6.00 & 2.00 & 2.00 & 1.98 \\
+0.75 & 1.0 & 0.48 & 0.26 & 0.26 & 1.40 & 2.00 & 2.00 & 1.31 \\
+0.75 & 2.0 & 0.25 & 0.38 & 0.38 & 2.80 & 2.00 & 2.00 & 1.98 \\
+0.75 & 3.0 & 0.16 & 0.42 & 0.42 & 4.19 & 2.00 & 2.00 & 2.32 \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Key observations from Table \ref{tab:vary-both}:}
+
+\begin{itemize}
+\item For a fixed shape parameter $k_1$, increasing $\lambda_1$ decreases $P_1$ (component 1 becomes less likely to fail first).
+\item For a fixed scale parameter $\lambda_1$, increasing $k_1$ also decreases $P_1$, but the mechanism is different: higher $k_1$ reduces infant mortality.
+\item The joint effects are multiplicative rather than additive. A component with low shape ($k_1 = 0.25$) and high scale ($\lambda_1 = 3.0$) still has MTTF = 10.89 and $P_1 = 0.41$, demonstrating the dominance of early hazard behavior in series systems.
+\item To minimize a component's failure probability, both increasing its scale parameter and increasing its shape parameter toward 1.0 are effective strategies, but they work through different mechanisms.
+\end{itemize}
+
+\subsection{Implications for Model Selection and Estimation}
+
+These tables quantitatively demonstrate several key principles that inform the simulation studies and model selection analyses in the main text:
+
+\begin{enumerate}
+\item \textbf{MTTF is insufficient:} Component failure probabilities depend on the entire hazard function shape, not just the mean. Systems with heterogeneous shape parameters require careful analysis beyond MTTF comparisons.
+
+\item \textbf{Shape parameter complexity:} The non-linear relationship between shape parameters and failure probabilities explains why shape parameters are harder to estimate and exhibit greater bias than scale parameters.
+
+\item \textbf{Information availability:} Components with high failure probabilities provide more data for estimation. When $P_j$ is small, parameter estimates for component $j$ will have high variance regardless of sample size.
+
+\item \textbf{Model selection criteria:} The reduced model (homogeneous shapes) is appropriate when shape parameters are already similar, as failure probabilities become more predictable from MTTF alone. When shape parameters diverge substantially, the full model is necessary to capture the complex failure probability structure.
+\end{enumerate}
+
+\bibliographystyle{IEEEtranN}
+\bibliography{refs}
+
+\end{document}
