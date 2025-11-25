@@ -44,7 +44,19 @@ This paper explores model selection for reliability estimation of components in 
 
 \section{Introduction}
 
-Estimating reliability of individual components in multi-component systems is challenging when only system-level failure data is observable. A likelihood model incorporating right-censoring and candidate sets was previously developed to enable component inference from such masked data \cite{towell2023reliability}. Simulation studies revealed estimator behavior and sensitivity to modeling assumptions given limited samples.
+Estimating reliability of individual components in multi-component systems is challenging when only system-level failure data is observable. This problem arises frequently in industrial settings where diagnosing the exact cause of system failure is expensive or infeasible, resulting in \emph{masked} failure data where only a candidate set of possible failure causes is known \cite{Fran-1991}.
+
+\subsection{Related Work}
+
+The statistical treatment of masked system failure data has a substantial history. Usher and Hodgson \cite{Usher-1988} introduced maximum likelihood methods for component reliability estimation from masked system life-test data, establishing the foundational framework for this field. Lin, Usher, and Guess \cite{Lin-1993} extended this work to derive exact maximum likelihood estimators, while Lin, Usher, and Guess \cite{Lin-1996} developed Bayesian approaches for component reliability estimation from masked data.
+
+For Weibull-distributed components specifically, Usher \cite{Usher-1996} addressed component reliability prediction in the presence of masked data. Guess and Usher \cite{Joh-1989} proposed an iterative approach for estimating component reliability that handles the computational challenges of masked data likelihood functions.
+
+Sarhan \cite{Amma-2001} examined reliability estimation from masked system life data under various distributional assumptions, later extending this work to linear failure rate models \cite{Amma-2004}. Tan \cite{Zhibi-2005, Zhibi-2007} contributed methods for exponential component reliability estimation from masked binomial system testing data and uncertain life data in series and parallel systems. More recently, Guo, Niu, and Szidarovszky \cite{Huairu-2013} studied estimating component reliabilities from incomplete system failure data, providing the baseline system configuration used in our simulation studies.
+
+Building on this literature, Towell \cite{towell2023reliability} developed a comprehensive likelihood model that incorporates both right-censoring and candidate sets for series systems with Weibull components, along with extensive simulation studies validating the maximum likelihood approach. The present paper extends that work by investigating model selection---specifically, when a reduced model assuming homogeneous component shapes is appropriate.
+
+\subsection{Contributions and Organization}
 
 A key question concerns choosing an appropriate model complexity. A reduced model assuming homogeneous component shapes simplifies analysis as the system becomes Weibull. However, deviations in component properties impact adequacy. Proper model specification requires balancing simplicity against representativeness.
 
