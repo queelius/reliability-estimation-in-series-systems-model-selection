@@ -2,7 +2,6 @@
 # LRT simulation: Controlled divergence from homogeneity
 # Systematically varies shape parameter heterogeneity using CV as the metric
 
-library(tidyverse)
 library(stats)
 library(wei.series.md.c1.c2.c3)
 

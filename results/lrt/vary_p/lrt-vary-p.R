@@ -2,7 +2,6 @@
 # LRT simulation: Vary masking probability (p)
 # Assesses how masking affects ability to distinguish full vs reduced model
 
-library(tidyverse)
 library(stats)
 library(wei.series.md.c1.c2.c3)
 

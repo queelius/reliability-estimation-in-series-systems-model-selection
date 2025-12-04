@@ -2,7 +2,6 @@
 # LRT simulation: Vary number of components (m)
 # Assesses how system complexity affects model selection
 
-library(tidyverse)
 library(stats)
 library(wei.series.md.c1.c2.c3)
 
