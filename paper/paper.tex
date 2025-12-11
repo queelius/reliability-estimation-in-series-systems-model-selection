@@ -833,6 +833,42 @@ These tables quantitatively demonstrate several key principles that inform the s
 \item \textbf{Model selection criteria:} The reduced model (homogeneous shapes) is appropriate when shape parameters are already similar, as failure probabilities become more predictable from MTTF alone. When shape parameters diverge substantially, the full model is necessary to capture the complex failure probability structure.
 \end{enumerate}
 
+\section{Ideal Case Analysis: No Masking or Censoring}
+\label{app:ideal-case}
+
+This appendix examines MLE behavior under ideal conditions---complete data with no masking ($p = 0$) and no censoring ($q = 1$). This ``best case'' scenario establishes baseline estimator performance when the true failed component is always known and all systems are observed until failure. Understanding this baseline helps separate inherent estimation challenges from complications introduced by masked and censored data.
+
+\subsection{Simulation Setup}
+
+We simulated a 2-component series system with parameters similar to our main study but simplified for clearer visualization. The failure probability of component 1, $P_1 = \Pr\{K_i = 1\}$, was varied from 0 to 0.55 by adjusting the shape parameter $k_1$ while holding other parameters fixed. For each configuration, 1000 replications were performed with $n = 100$ observations per replication.
+
+\subsection{Results}
+
+Figure \ref{fig:ideal-case} shows LOESS-smoothed estimates of shape and scale parameters as a function of the true failure probability $P_1$.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{image/ideal_case_n100_p0_q1.pdf}
+\caption{MLE behavior under ideal conditions (no masking, no censoring) for a 2-component series system with $n = 100$. LOESS-smoothed parameter estimates are shown as a function of component 1's failure probability $P_1$. Shaded regions indicate 95\% confidence bands.}
+\label{fig:ideal-case}
+\end{figure}
+
+\subsection{Key Observations}
+
+\begin{enumerate}
+\item \textbf{Bias persists even in ideal conditions:} Shape parameter estimates exhibit bias even without masking or censoring. This reflects the inherent difficulty of estimating Weibull shape parameters from limited samples, particularly for components with low failure probabilities.
+
+\item \textbf{Information asymmetry:} Components with higher failure probabilities ($P_j$ near 0.5) provide more information for estimation, resulting in lower bias and variance. Components that rarely cause system failure yield less precise estimates regardless of data quality.
+
+\item \textbf{Scale parameters are more stable:} Consistent with findings in the main text, scale parameter estimates show less sensitivity to failure probability than shape parameters. This robustness persists even in the ideal case.
+
+\item \textbf{Baseline for masked/censored comparisons:} The bias patterns observed here represent the ``floor'' of estimation difficulty. Any additional bias in the main simulation studies (with $p = 0.215$, $q = 0.825$) can be attributed to information loss from masking and censoring.
+\end{enumerate}
+
+\subsection{Implications}
+
+The ideal case analysis confirms that MLE challenges in series systems are not solely due to data complications. Even with perfect information about which component failed and complete observation of all failures, shape parameter estimation remains difficult for components with low failure probabilities. This underscores the importance of the model selection guidance in the main text: when component shapes are genuinely similar, the reduced model's pooling of information across components can improve estimation by effectively increasing the sample size for the common shape parameter.
+
 \bibliographystyle{IEEEtranN}
 \bibliography{refs}
 
