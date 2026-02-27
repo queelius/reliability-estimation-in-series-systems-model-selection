@@ -29,7 +29,8 @@
   \Large{Alex Towell} \\
   Department of Computer Science \\
   Southern Illinois University Edwardsville \\
-  \href{mailto:lex@metafunctor.com}{lex@metafunctor.com}
+  \href{mailto:lex@metafunctor.com}{lex@metafunctor.com} \\[4pt]
+  ORCID: \href{https://orcid.org/0000-0001-6443-9897}{0000-0001-6443-9897}
 }
 \date{}
 
@@ -40,6 +41,8 @@
 \begin{abstract}
 When a reliability engineer simplifies a series system model by assuming all components share a common Weibull shape parameter, how much accuracy is lost---and can the data even tell the difference? We show that these two questions have a quantitatively aligned answer. The common-shape model's prediction bias grows super-linearly with shape heterogeneity, remaining below 1\% in system MTTF through shape CV $\approx 15\%$, while the likelihood ratio test's power to detect the misspecification grows super-linearly. This creates a safe zone: the test lacks power precisely where the consequence of using the wrong model is negligible for engineering decisions. An adaptive LRT-based procedure exploits this alignment, achieving RMSE within 2.5\% of the full model at $n \geq 500$ while selecting the simpler model over 90\% of the time when appropriate. The common-shape model is the unique single-parameter reduction that preserves the Weibull property of the system lifetime, making it the natural parsimony boundary. Our analysis, conducted under realistic conditions of right-censored and masked failure data, provides practitioners with both the assurance that simplification is safe and the tools to decide when it is not.
 \end{abstract}
+
+\noindent\textbf{Keywords:} Weibull distribution, series systems, masked failure data, model selection, likelihood ratio test
 
 \section{Introduction}
 
@@ -538,6 +541,14 @@ Figure~\ref{fig:ideal-case} examines MLE behavior under ideal conditions---no ma
 \caption{MLE behavior under ideal conditions (no masking, no censoring) for a 2-component series system with $n = 100$.}
 \label{fig:ideal-case}
 \end{figure}
+
+\section*{Data Availability Statement}
+
+The simulation code and data supporting this study are available in the GitHub repository at \url{https://github.com/queelius/masked-series-model-selection}. The R package used for all simulations is available at \url{https://github.com/queelius/wei.series.md.c1.c2.c3}.
+
+\section*{Conflict of Interest}
+
+The author declares no conflicts of interest.
 
 \bibliographystyle{IEEEtranN}
 \bibliography{refs}
