@@ -1,0 +1,30 @@
+\documentclass[11pt]{letter}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+
+\signature{Alex Towell\\
+\href{mailto:lex@metafunctor.com}{lex@metafunctor.com}\\
+ORCID: \href{https://orcid.org/0000-0001-6443-9897}{0000-0001-6443-9897}}
+
+\address{Alex Towell\\Southern Illinois University Edwardsville\\Edwardsville, IL 62026}
+
+\date{\today}
+
+\begin{document}
+
+\begin{letter}{Editor-in-Chief\\Quality and Reliability Engineering International}
+
+\opening{Dear Editor,}
+
+I am submitting the manuscript ``When Does Model Simplification Matter? Consequence Analysis for Weibull Series Systems'' for consideration as a research article in \textit{Quality and Reliability Engineering International}.
+
+This paper addresses a practical question in reliability engineering: when can a Weibull series system model be safely simplified by assuming all components share a common shape parameter? Through extensive Monte Carlo simulation under realistic conditions of right-censored and masked failure data, we demonstrate a favorable alignment between the prediction consequence of model misspecification and the statistical power to detect it. The common-shape model's MTTF bias remains below 1\% through shape CV $\approx 15\%$, while the likelihood ratio test lacks power precisely in this regime. We develop an adaptive LRT-based procedure that exploits this alignment, achieving RMSE within 2.5\% of the full model at $n \geq 500$ while selecting the simpler model over 90\% of the time when appropriate.
+
+I believe this work is well suited for QREI given the journal's emphasis on practical engineering aspects of quality and reliability, and its strong tradition in Weibull-based reliability methods and masked failure data analysis. The paper provides practitioners with both the assurance that a common simplification is safe and the tools to decide when it is not.
+
+This manuscript has not been published or submitted elsewhere. The author declares no conflicts of interest.
+
+\closing{Sincerely,}
+
+\end{letter}
+\end{document}

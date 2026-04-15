@@ -1,0 +1,97 @@
+\begin{thebibliography}{13}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Akaike(1974)]{akaike1974}
+Hirotugu Akaike.
+\newblock A new look at the statistical model identification.
+\newblock \emph{IEEE Transactions on Automatic Control}, 19\penalty0
+  (6):\penalty0 716--723, 1974.
+
+\bibitem[Barlow and Proschan(1975)]{barlow1975}
+Richard~E. Barlow and Frank Proschan.
+\newblock \emph{Statistical Theory of Reliability and Life Testing: Probability
+  Models}.
+\newblock Holt, Rinehart and Winston, New York, 1975.
+
+\bibitem[Byrd et~al.(1995)Byrd, Lu, Nocedal, and Zhu]{byrd1995}
+Richard~H Byrd, Peihuang Lu, Jorge Nocedal, and Ciyou Zhu.
+\newblock A limited memory algorithm for bound constrained optimization.
+\newblock \emph{SIAM Journal on Scientific Computing}, 16\penalty0
+  (5):\penalty0 1190--1208, 1995.
+
+\bibitem[Craiu and Lee(2005)]{Craiu-2005}
+R.V. Craiu and T.C.M. Lee.
+\newblock Model selection for the competing-risks model with and without
+  masking.
+\newblock \emph{Technometrics}, 47\penalty0 (4):\penalty0 457--467, 2005.
+
+\bibitem[Guess and Usher(1989)]{Joh-1989}
+Frank~M. Guess and John~S. Usher.
+\newblock An iterative approach for estimating component reliability from
+  masked system life data.
+\newblock \emph{Quality and Reliability Engineering International}, 5\penalty0
+  (4):\penalty0 257--261, oct 1989.
+\newblock \doi{10.1002/qre.4680050403}.
+
+\bibitem[Guo et~al.(2013)Guo, Niu, and Szidarovszky]{Huairu-2013}
+Huairui Guo, Pengying Niu, and F.~Szidarovszky.
+\newblock Estimating component reliabilities from incomplete system failure
+  data.
+\newblock \emph{Annual Reliability and Maintainability Symposium (RAMS)}, pages
+  1--6, jan 2013.
+\newblock \doi{10.1109/rams.2013.6517765}.
+
+\bibitem[Lin et~al.(1993)Lin, Usher, and Guess]{Lin-1993}
+D.K.J. Lin, J.S. Usher, and F.M. Guess.
+\newblock Exact maximum likelihood estimation using masked system data.
+\newblock \emph{IEEE Transactions on Reliability}, 42\penalty0 (4):\penalty0
+  631--635, 1993.
+\newblock \doi{10.1109/24.273596}.
+
+\bibitem[Schwarz(1978)]{schwarz1978}
+Gideon Schwarz.
+\newblock Estimating the dimension of a model.
+\newblock \emph{The Annals of Statistics}, 6\penalty0 (2):\penalty0 461--464,
+  1978.
+
+\bibitem[Towell(2023{\natexlab{a}})]{towell2023reliability}
+Alex Towell.
+\newblock Reliability estimation in series systems: Maximum likelihood
+  techniques for right-censored and masked failure data, 2023{\natexlab{a}}.
+\newblock URL
+  \url{https://github.com/queelius/reliability-estimation-in-series-systems}.
+\newblock [Online; accessed 2026-02-18].
+
+\bibitem[Towell(2023{\natexlab{b}})]{towell2023weibull}
+Alex Towell.
+\newblock \emph{wei.series.md.c1.c2.c3: Estimating Reliability of Weibull
+  Components in Series from Masked Data}, 2023{\natexlab{b}}.
+\newblock URL \url{https://queelius.github.io/wei.series.md.c1.c2.c3/}.
+\newblock R package version 0.9.0. [Online; accessed 2026-02-18]. Available:
+  \url{https://github.com/queelius/wei.series.md.c1.c2.c3/}.
+
+\bibitem[Usher and Hodgson(1988)]{Usher-1988}
+J.S. Usher and T.J. Hodgson.
+\newblock Maximum likelihood analysis of component reliability using masked
+  system life-test data.
+\newblock \emph{IEEE Transactions on Reliability}, 37\penalty0 (5):\penalty0
+  550--555, 1988.
+\newblock \doi{10.1109/24.9880}.
+
+\bibitem[White(1982)]{White-1982}
+Halbert White.
+\newblock Maximum likelihood estimation of misspecified models.
+\newblock \emph{Econometrica}, 50\penalty0 (1):\penalty0 1--25, 1982.
+
+\bibitem[Wilks(1938)]{wilks1938}
+Samuel~S. Wilks.
+\newblock The large-sample distribution of the likelihood ratio for testing
+  composite hypotheses.
+\newblock \emph{The Annals of Mathematical Statistics}, 9\penalty0
+  (1):\penalty0 60--62, 1938.
+
+\end{thebibliography}

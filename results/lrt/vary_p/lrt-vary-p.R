@@ -5,6 +5,11 @@
 library(stats)
 library(wei.series.md.c1.c2.c3)
 
+# Source shared vectorized utilities
+source("../../sim_utils.R")
+
+set.seed(2024)
+
 # Baseline well-designed system
 theta <- c(shape1 = 1.2576, scale1 = 994.3661,
            shape2 = 1.1635, scale2 = 908.9458,
@@ -32,31 +37,72 @@ cat("Baseline system:\n")
 cat("  Shape CV:", round(cv_shapes, 4), "\n")
 cat("  Max/Min ratio:", round(maxmin_ratio, 4), "\n\n")
 
-# Initialize output file
-write.table(
-  data.frame(n = integer(), p = numeric(), q = numeric(),
-             p_value = numeric(), Lambda = numeric(),
-             loglik_F = numeric(), loglik_R = numeric(),
-             cv_shapes = numeric(), maxmin_ratio = numeric()),
-  file = csv_file, sep = ",", row.names = FALSE, col.names = TRUE
-)
+# Resume logic: read existing data if present
+completed_counts <- list()
+if (file.exists(csv_file)) {
+  existing <- read.csv(csv_file)
+  if (nrow(existing) > 0) {
+    counts <- aggregate(p_value ~ n + p, data = existing, FUN = length)
+    for (i in 1:nrow(counts)) {
+      key <- paste(counts$n[i], counts$p[i], sep = "_")
+      completed_counts[[key]] <- counts$p_value[i]
+    }
+    cat("Resuming: found", nrow(existing), "existing rows across", length(completed_counts), "conditions\n")
+  }
+} else {
+  # Initialize new file with header
+  write.table(
+    data.frame(n = integer(), p = numeric(), q = numeric(),
+               p_value = numeric(), Lambda = numeric(),
+               loglik_F = numeric(), loglik_R = numeric(),
+               cv_shapes = numeric(), maxmin_ratio = numeric(),
+               aic_F = numeric(), aic_R = numeric(),
+               bic_F = numeric(), bic_R = numeric()),
+    file = csv_file, sep = ",", row.names = FALSE, col.names = TRUE
+  )
+}
+
+n_errors <- 0
 
 for (p in P_values) {
   tau <- qwei_series(p = q, scales = scales, shapes = shapes)
 
   for (n in N_values) {
-    cat("Running: p =", p, ", n =", n, "\n")
+    key <- paste(n, p, sep = "_")
+    n_done <- if (!is.null(completed_counts[[key]])) completed_counts[[key]] else 0
+    if (n_done >= n_reps) {
+      cat("  Skipping: p =", p, ", n =", n, "(", n_done, "already done)\n")
+      next
+    }
+    n_remaining <- n_reps - n_done
 
-    for (rep in 1:n_reps) {
+    # Per-condition reproducible seed
+    condition_idx <- which(P_values == p) * 100 + which(N_values == n)
+    set.seed(2024 * 1000 + condition_idx)
+    if (n_done > 0) {
+      # Advance RNG past already-completed reps
+      for (skip in 1:n_done) runif(1)
+      cat("  Resuming: p =", p, ", n =", n, "(", n_done, "done,", n_remaining, "remaining)\n")
+    } else {
+      cat("Running: p =", p, ", n =", n, "\n")
+    }
+
+    # Batch results for this condition
+    results_batch <- vector("list", n_remaining)
+    batch_idx <- 0L
+
+    for (rep in (n_done + 1):n_reps) {
       tryCatch({
         # Generate data
         df <- generate_guo_weibull_table_2_data(
           shapes = shapes, scales = scales, n = n, p = p, tau = tau)
 
-        # Fit full model
-        sol_F <- mle_lbfgsb_wei_series_md_c1_c2_c3(
-          theta0 = theta, df = df, hessian = FALSE,
-          control = list(maxit = max_iter, parscale = theta))
+        # Pre-decode data once
+        dd <- decode_data(df)
+
+        # Fit full model (vectorized)
+        sol_F <- fit_full_model(theta0 = theta, t = dd$t, delta = dd$delta,
+                                C = dd$C, max_iter = max_iter)
 
         if (sol_F$convergence != 0) next
 
@@ -64,35 +110,52 @@ for (p in P_values) {
         scales_mle <- sol_F$par[seq(2, length(theta), 2)]
         k_hat <- mean(shapes_mle)
 
-        # Fit reduced model
-        loglik_reduced <- function(df, k, scales) {
-          theta_r <- rep(NA, length(scales) * 2)
-          for (i in 1:length(scales)) {
-            theta_r[2*(i-1) + 1] <- k
-            theta_r[2*(i-1) + 2] <- scales[i]
-          }
-          wei.series.md.c1.c2.c3::loglik_wei_series_md_c1_c2_c3(df = df, theta = theta_r)
-        }
-
-        sol_R <- stats::optim(
-          par = c(k_hat, scales_mle),
-          fn = function(theta) loglik_reduced(df = df, k = theta[1], scales = theta[-1]),
-          control = list(fnscale = -1, maxit = max_iter))
+        # Fit reduced model (vectorized + L-BFGS-B with gradient)
+        sol_R <- fit_reduced_model(par0 = c(k_hat, scales_mle),
+                                   t = dd$t, delta = dd$delta, C = dd$C,
+                                   max_iter = max_iter)
 
         # LRT
         Lambda <- -2 * (sol_R$value - sol_F$value)
         p_value <- pchisq(Lambda, m - 1, lower.tail = FALSE)
 
-        # Write result
-        write.table(
-          data.frame(n = n, p = p, q = q, p_value = p_value, Lambda = Lambda,
-                     loglik_F = sol_F$value, loglik_R = sol_R$value,
-                     cv_shapes = cv_shapes, maxmin_ratio = maxmin_ratio),
-          file = csv_file, sep = ",", append = TRUE,
-          row.names = FALSE, col.names = FALSE)
+        # AIC and BIC
+        k_F <- 2 * m        # full model parameters
+        k_R <- m + 1         # reduced model parameters
+        aic_F <- -2 * sol_F$value + 2 * k_F
+        aic_R <- -2 * sol_R$value + 2 * k_R
+        bic_F <- -2 * sol_F$value + k_F * log(n)
+        bic_R <- -2 * sol_R$value + k_R * log(n)
 
-      }, error = function(e) { })
+        # Accumulate result
+        batch_idx <- batch_idx + 1L
+        results_batch[[batch_idx]] <- data.frame(
+          n = n, p = p, q = q, p_value = p_value, Lambda = Lambda,
+          loglik_F = sol_F$value, loglik_R = sol_R$value,
+          cv_shapes = cv_shapes, maxmin_ratio = maxmin_ratio,
+          aic_F = aic_F, aic_R = aic_R,
+          bic_F = bic_F, bic_R = bic_R)
+
+      }, error = function(e) {
+        n_errors <<- n_errors + 1
+        cat("[ERROR rep", rep, "]", conditionMessage(e), "\n")
+      })
     }
+
+    # Write batch for this condition
+    if (batch_idx > 0) {
+      write.table(do.call(rbind, results_batch[1:batch_idx]),
+                  file = csv_file, sep = ",", append = TRUE,
+                  row.names = FALSE, col.names = FALSE)
+    }
+
+    n_new <- batch_idx
+    if (n_done > 0) {
+      cat("  Completed:", n_new, "/", n_remaining, "new successful (", n_errors, "errors,", n_done, "resumed)\n")
+    } else {
+      cat("  Completed:", n_new, "/", n_reps, "successful (", n_errors, "errors)\n")
+    }
+    n_errors <- 0
   }
 }
 

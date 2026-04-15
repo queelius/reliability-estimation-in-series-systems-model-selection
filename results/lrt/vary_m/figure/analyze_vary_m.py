@@ -9,6 +9,21 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pathlib import Path
+
+# --- Path setup ---
+SCRIPT_DIR = Path(__file__).resolve().parent
+PAPER_IMAGE = SCRIPT_DIR.parents[3] / 'paper' / 'image'
+PAPER_IMAGE.mkdir(parents=True, exist_ok=True)
+
+
+def wilson_ci(p_hat, n, z=1.96):
+    """Wilson score confidence interval for a proportion."""
+    denom = 1 + z**2 / n
+    center = (p_hat + z**2 / (2*n)) / denom
+    margin = z * np.sqrt(p_hat * (1 - p_hat) / n + z**2 / (4*n**2)) / denom
+    return max(0, center - margin), min(1, center + margin)
+
 
 # Read data
 df = pd.read_csv('../data-lrt-vary-m.csv')
@@ -16,23 +31,40 @@ df = pd.read_csv('../data-lrt-vary-m.csv')
 # Significance level
 alpha = 0.05
 
+# Check if AIC/BIC columns are present
+has_ic = 'aic_F' in df.columns and 'aic_R' in df.columns
+
+if has_ic:
+    df['aic_selects_full'] = df['aic_F'] < df['aic_R']
+    df['bic_selects_full'] = df['bic_F'] < df['bic_R']
+
 # Compute rejection rate by (m, n)
-summary = df.groupby(['m', 'n']).agg(
+agg_dict = dict(
     reject_rate=('p_value', lambda x: (x < alpha).mean()),
     n_reps=('p_value', 'count'),
     mean_lambda=('Lambda', 'mean'),
     sd_lambda=('Lambda', 'std'),
     df_lrt=('df_lrt', 'first'),
     cv_shapes=('cv_shapes', 'first')
-).reset_index()
+)
+if has_ic:
+    agg_dict['aic_selects_full_rate'] = ('aic_selects_full', 'mean')
+    agg_dict['bic_selects_full_rate'] = ('bic_selects_full', 'mean')
 
-# Standard error for rejection rate (binomial)
+summary = df.groupby(['m', 'n']).agg(**agg_dict).reset_index()
+
+# Standard error for rejection rate (binomial) -- kept for print statements
 summary['se_reject'] = np.sqrt(summary['reject_rate'] * (1 - summary['reject_rate']) / summary['n_reps'])
 
 # Expected mean of chi-squared is df
 summary['expected_lambda'] = summary['df_lrt']
 
-print("LRT Type I Error Rate by Number of Components (m)")
+# Wilson confidence intervals
+wilson_results = summary.apply(lambda row: wilson_ci(row['reject_rate'], row['n_reps']), axis=1)
+summary['ci_low'] = wilson_results.apply(lambda x: x[0])
+summary['ci_high'] = wilson_results.apply(lambda x: x[1])
+
+print("LRT Rejection Rate by Number of Components (m)")
 print("=" * 60)
 print(f"Nominal alpha = {alpha}")
 print(f"Expected rejection rate under H0: {alpha}")
@@ -49,13 +81,16 @@ fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 ax1 = axes[0, 0]
 for n in sorted(df['n'].unique()):
     sub = summary[summary['n'] == n]
-    ax1.errorbar(sub['m'], sub['reject_rate'], yerr=1.96*sub['se_reject'],
+    yerr_low = sub['reject_rate'] - sub['ci_low']
+    yerr_high = sub['ci_high'] - sub['reject_rate']
+    ax1.errorbar(sub['m'], sub['reject_rate'],
+                 yerr=[yerr_low.values, yerr_high.values],
                  marker='o', label=f'n={n}', capsize=3)
 
 ax1.axhline(y=alpha, color='red', linestyle='--', label=f'Nominal alpha={alpha}')
 ax1.set_xlabel('Number of Components (m)')
 ax1.set_ylabel('Rejection Rate')
-ax1.set_title('Type I Error Rate vs System Complexity')
+ax1.set_title('Rejection Rate vs System Complexity')
 ax1.legend(loc='best')
 ax1.set_ylim(0, 0.15)
 ax1.set_xticks(sorted(df['m'].unique()))
@@ -96,8 +131,36 @@ ax4.grid(True, alpha=0.3, axis='y')
 
 plt.tight_layout()
 plt.savefig('lrt_vary_m_rejection_rate.pdf', bbox_inches='tight')
-plt.savefig('/home/spinoza/github/rlang/reliability-estimation-in-series-systems-model-selection/image/lrt_vary_m_rejection_rate.pdf', bbox_inches='tight')
+plt.savefig(PAPER_IMAGE / 'lrt_vary_m_rejection_rate.pdf', bbox_inches='tight')
 print("\nFigure saved to lrt_vary_m_rejection_rate.pdf")
+
+# --- AIC/BIC comparison figure ---
+if has_ic:
+    ic_summary = df.groupby(['m', 'n']).agg(
+        aic_selects_full=('aic_selects_full', 'mean'),
+        bic_selects_full=('bic_selects_full', 'mean'),
+        reject_rate=('p_value', lambda x: (x < alpha).mean()),
+        n_reps=('p_value', 'count')
+    ).reset_index()
+
+    fig_ic, ax = plt.subplots(figsize=(8, 5))
+    for n_val in [500, 5000]:
+        sub = ic_summary[ic_summary['n'] == n_val]
+        ax.plot(sub['m'], sub['reject_rate'], 'o-', label=f'LRT (n={n_val})', linewidth=2)
+        ax.plot(sub['m'], sub['aic_selects_full'], 's--', label=f'AIC (n={n_val})', linewidth=1.5)
+        ax.plot(sub['m'], sub['bic_selects_full'], '^:', label=f'BIC (n={n_val})', linewidth=1.5)
+    ax.axhline(y=alpha, color='red', linestyle='--', alpha=0.3)
+    ax.set_xlabel('Number of Components (m)')
+    ax.set_ylabel('Rate')
+    ax.set_title('Model Selection: LRT vs AIC vs BIC')
+    ax.legend(loc='best')
+    ax.set_ylim(0, 0.20)
+    ax.set_xticks(sorted(df['m'].unique()))
+    ax.grid(True, alpha=0.3)
+    fig_ic.tight_layout()
+    fig_ic.savefig('lrt_vs_aic_bic_vary_m.pdf', bbox_inches='tight')
+    fig_ic.savefig(PAPER_IMAGE / 'lrt_vs_aic_bic_vary_m.pdf', bbox_inches='tight')
+    print("\nAIC/BIC comparison figure saved")
 
 # Summary table for paper
 print("\n" + "=" * 60)

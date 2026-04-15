@@ -1,4 +1,3 @@
-library(tidyverse)
 library(parallel)
 library(boot)
 library(stats)
@@ -6,6 +5,11 @@ library(algebraic.mle)
 library(algebraic.dist)
 library(md.tools)
 library(wei.series.md.c1.c2.c3)
+
+# Source shared vectorized utilities
+source("../sim_utils.R")
+
+set.seed(2024)
 
 theta <- c(shape1 = 1.2576, scale1 = 994.3661,
            shape2 = 1.1635, scale2 = 908.9458,
@@ -19,11 +23,12 @@ scales3 <- rep(scales3, 100)
 N <- c(100)
 P <- c(0.215)
 Q <- c(0.825)
-R <- 2 
+R <- 2
 B <- 1000
 max_iter <- 100L
 max_boot_iter <- 125L
-n_cores <- 2L
+# Auto-detect cores (leave 2 for OS/other tasks)
+n_cores <- max(2L, parallel::detectCores() - 2L)
 
 experiment.name <- "boot-prob-scale3-vary"
 csv.out <- paste0(experiment.name, ".csv")
@@ -47,7 +52,42 @@ for (scale3 in scales3) {
     })
 }
 
+# Resume logic: read existing data if present
+completed_counts <- list()
+if (file.exists(csv.out)) {
+  existing <- read.csv(csv.out)
+  if (nrow(existing) > 0) {
+    counts <- table(existing$scale3)
+    for (nm in names(counts)) {
+      completed_counts[[nm]] <- as.integer(counts[nm])
+    }
+    cat("Resuming: found", nrow(existing), "existing rows across",
+        length(completed_counts), "conditions\n")
+  }
+}
+
+n_errors <- 0
+iter_idx <- 0L
+running_counts <- list()
+
 for (scale3 in scales3) {
+    iter_idx <- iter_idx + 1L
+    s3_key <- as.character(scale3)
+
+    # Track running count for this condition
+    if (is.null(running_counts[[s3_key]])) running_counts[[s3_key]] <- 0L
+    running_counts[[s3_key]] <- running_counts[[s3_key]] + 1L
+
+    # Skip if this iteration's worth of rows already exists
+    n_done_rows <- if (!is.null(completed_counts[[s3_key]])) completed_counts[[s3_key]] else 0L
+    n_done_iters <- n_done_rows %/% R  # each iteration writes R rows
+    if (running_counts[[s3_key]] <= n_done_iters) {
+      next
+    }
+
+    # Per-iteration reproducible seed
+    set.seed(2024 * 1000 + iter_idx)
+
     for (n in N) {
         for (p in P) {
             for (q in Q) {
@@ -74,25 +114,30 @@ for (scale3 in scales3) {
                             df <- generate_guo_weibull_table_2_data(
                                 shapes = shapes, scales = scales, n = n, p = p, tau = tau)
 
-                            sol <- mle_lbfgsb_wei_series_md_c1_c2_c3(
-                                theta0 = theta, df = df, hessian = FALSE,
-                                control = list(maxit = max_iter, parscale = theta))
+                            # Pre-decode data for initial MLE fit
+                            dd <- decode_data(df)
+                            sol <- fit_full_model(theta0 = theta, t = dd$t,
+                                                  delta = dd$delta, C = dd$C,
+                                                  max_iter = max_iter)
                             if (sol$convergence == 0) {
                                 break
                             }
                             cat("[", iter, "] MLE did not converge, retrying...\n")
                         }
 
+                        # Bootstrap MLE solver using vectorized fitting
                         mle_solver <- function(df, i) {
-                            mle_lbfgsb_wei_series_md_c1_c2_c3(
-                                theta0 = sol$par, df = df[i, ], hessian = FALSE,
-                                control = list(maxit = max_boot_iter, parscale = sol$par))$par
+                            dd_b <- decode_data(df[i, ])
+                            fit_full_model(theta0 = sol$par, t = dd_b$t,
+                                           delta = dd_b$delta, C = dd_b$C,
+                                           max_iter = max_boot_iter)$par
                         }
                         sol.boot <- boot::boot(df, mle_solver,
                             R = B, parallel = "multicore", ncpus = n_cores)
                     },
                     error = function(e) {
                         cat("[error] ", conditionMessage(e), "\n")
+                        n_errors <<- n_errors + 1
                         cat("[retrying] scenario(n = ", n, ", p = ", p, ", q = ", q, ")\n")
                         retry <<- TRUE
                     })
@@ -115,7 +160,7 @@ for (scale3 in scales3) {
                         scales.upper[iter, ] <- scales.ci[, 2]
                     }, error = function(e) {
                         cat("[error] ", conditionMessage(e), "\n")
-                    })                    
+                    })
 
                     if (iter %% 1 == 0) {
                         cat("[iteration ", iter, "] shape mles: ", shapes.mle[iter,], ", scale mles = ", scales.mle[iter, ], "\n")
@@ -150,3 +195,4 @@ for (scale3 in scales3) {
         }
     }
 }
+cat("Completed with", n_errors, "errors\n")
