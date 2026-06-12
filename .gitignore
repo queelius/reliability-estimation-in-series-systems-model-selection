@@ -27,3 +27,17 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+
+# qrei/ LaTeX auxiliary files (manuscript.pdf and cover-letter.pdf are tracked)
+qrei/*.aux
+qrei/*.bbl
+qrei/*.blg
+qrei/*.log
+qrei/*.out
+qrei/*.toc
+qrei/*.fls
+qrei/*.fdb_latexmk
+qrei/*.synctex.gz
+
+# simulation CSV backups
+results/**/*.bak.*
