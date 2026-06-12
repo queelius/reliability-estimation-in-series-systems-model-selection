@@ -1,4 +1,3 @@
-library(tidyverse)
 library(parallel)
 library(boot)
 library(stats)
@@ -7,22 +6,28 @@ library(algebraic.dist)
 library(md.tools)
 library(wei.series.md.c1.c2.c3)
 
+# Source shared vectorized utilities
+source("../sim_utils.R")
+
+set.seed(2024)
+
 theta <- c(shape1 = 1.2576, scale1 = 994.3661,
            shape2 = 1.1635, scale2 = 908.9458,
            shape3 = NA,     scale3 = 840.1141,
            shape4 = 1.1802, scale4 = 940.1342,
            shape5 = 1.2034, scale5 = 923.1631)
 
-shapes3 <- rep(c(0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9), 1000)
+shapes3 <- rep(c(0.9, 1.0, 1.1308, 1.2, 1.3), 100)
 N <- c(100)
 P <- c(0.215)
 Q <- c(0.825)
-R <- 5
+R <- 2
 B <- 1000
 max_iter <- 125L
 max_boot_iter <- 125L
 total_retries <- 10000L
-n_cores <- 2L
+# Auto-detect cores (leave 2 for OS/other tasks)
+n_cores <- max(2L, parallel::detectCores() - 2L)
 
 experiment.name <- "boot-prob-shape3-vary"
 csv.out <- paste0(experiment.name, ".csv")
@@ -47,8 +52,43 @@ for (shape3 in shapes3) {
     })
 }
 
+# Resume logic: read existing data if present
+completed_counts <- list()
+if (file.exists(csv.out)) {
+  existing <- read.csv(csv.out)
+  if (nrow(existing) > 0) {
+    counts <- table(existing$shapes1)
+    for (nm in names(counts)) {
+      completed_counts[[nm]] <- as.integer(counts[nm])
+    }
+    cat("Resuming: found", nrow(existing), "existing rows across",
+        length(completed_counts), "conditions\n")
+  }
+}
+
+n_errors <- 0
+iter_idx <- 0L
+running_counts <- list()
+
 options(digits = 5, scipen = 999)
 for (shape3 in shapes3) {
+    iter_idx <- iter_idx + 1L
+    s3_key <- as.character(shape3)
+
+    # Track running count for this condition
+    if (is.null(running_counts[[s3_key]])) running_counts[[s3_key]] <- 0L
+    running_counts[[s3_key]] <- running_counts[[s3_key]] + 1L
+
+    # Skip if this iteration's worth of rows already exists
+    n_done_rows <- if (!is.null(completed_counts[[s3_key]])) completed_counts[[s3_key]] else 0L
+    n_done_iters <- n_done_rows %/% R  # each iteration writes R rows
+    if (running_counts[[s3_key]] <= n_done_iters) {
+      next
+    }
+
+    # Per-iteration reproducible seed
+    set.seed(2024 * 1000 + iter_idx)
+
     for (n in N) {
         for (p in P) {
             for (q in Q) {
@@ -75,19 +115,23 @@ for (shape3 in shapes3) {
                             df <- wei.series.md.c1.c2.c3::generate_guo_weibull_table_2_data(
                                 shapes = shapes, scales = scales, n = n, p = p, tau = tau)
 
-                            sol <- mle_lbfgsb_wei_series_md_c1_c2_c3(
-                                theta0 = theta, df = df, hessian = FALSE,
-                                control = list(maxit = max_iter, parscale = theta))
+                            # Pre-decode data for initial MLE fit
+                            dd <- decode_data(df)
+                            sol <- fit_full_model(theta0 = theta, t = dd$t,
+                                                  delta = dd$delta, C = dd$C,
+                                                  max_iter = max_iter)
                             if (sol$convergence == 0) {
                                 break
                             }
                             cat("[", iter, "] MLE did not converge, retrying...\n")
                         }
 
+                        # Bootstrap MLE solver using vectorized fitting
                         mle_solver <- function(df, i) {
-                            solb <- mle_lbfgsb_wei_series_md_c1_c2_c3(
-                                theta0 = sol$par, df = df[i, ], hessian = FALSE,
-                                control = list(maxit = max_boot_iter, parscale = sol$par))
+                            dd_b <- decode_data(df[i, ])
+                            solb <- fit_full_model(theta0 = sol$par, t = dd_b$t,
+                                                   delta = dd_b$delta, C = dd_b$C,
+                                                   max_iter = max_boot_iter)
                             solb$par
                         }
 
@@ -96,6 +140,7 @@ for (shape3 in shapes3) {
                     },
                     error = function(e) {
                         cat("[error] ", conditionMessage(e), "\n")
+                        n_errors <<- n_errors + 1
                         cat("[retrying scenario n = ", n, ", p = ", p, ", q = ", q, "]")
                     })
                     if (retry) {
@@ -116,7 +161,7 @@ for (shape3 in shapes3) {
                         scales.upper[iter, ] <- scales.ci[, 2]
                     }, error = function(e) {
                         cat("[bootstrap error: ", conditionMessage(e), "]\n")
-                    })                    
+                    })
 
                     if (iter %% 1 == 0) {
                         cat("[iteration ", iter, "] shape mles: ", shapes.mle[iter,], ", scale mles = ", scales.mle[iter, ], "\n")
@@ -151,3 +196,4 @@ for (shape3 in shapes3) {
         }
     }
 }
+cat("Completed with", n_errors, "errors\n")

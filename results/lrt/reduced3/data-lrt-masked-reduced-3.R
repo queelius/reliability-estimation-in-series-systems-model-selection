@@ -1,9 +1,13 @@
-library(tidyverse)
 library(stats)
 library(algebraic.mle)
 library(algebraic.dist)
 library(md.tools)
 library(wei.series.md.c1.c2.c3)
+
+# Source shared vectorized utilities
+source("../../sim_utils.R")
+
+set.seed(2024)
 
 theta <- c(shape1 = 1.2576, scale1 = 994.3661,
            shape2 = 1.1635, scale2 = 908.9458,
@@ -18,8 +22,69 @@ p <- .215
 q <- .825
 max_iter <- 1000L
 
+# Resume logic: read existing data if present
+completed_counts <- list()
+if (file.exists(csv.file)) {
+  existing <- read.csv(csv.file)
+  if (nrow(existing) > 0) {
+    counts <- table(existing$shape3)
+    for (nm in names(counts)) {
+      completed_counts[[nm]] <- as.integer(counts[nm])
+    }
+    cat("Resuming: found", nrow(existing), "existing rows\n")
+    for (nm in names(completed_counts)) {
+      cat("  shape3 =", nm, ":", completed_counts[[nm]], "rows\n")
+    }
+  }
+} else {
+  write.table(
+    data.frame(n = integer(), pmask = numeric(), q = numeric(),
+               shape3 = numeric(), p.value = numeric(), Lambda = numeric(),
+               loglik.F = numeric(), loglik.R = numeric()),
+    file = csv.file, sep = ",", row.names = FALSE, col.names = TRUE)
+}
+
+n_errors <- 0
+n_total <- length(N) * length(shapes3)
+iter_idx <- 0L
+running_counts <- list()
+
+# Batch results by shape3 for efficient writes
+current_s3 <- NULL
+results_batch <- list()
+batch_idx <- 0L
+
+flush_batch <- function() {
+  if (batch_idx > 0L) {
+    write.table(do.call(rbind, results_batch[1:batch_idx]),
+                file = csv.file, sep = ",", append = TRUE,
+                row.names = FALSE, col.names = FALSE)
+  }
+  results_batch <<- list()
+  batch_idx <<- 0L
+}
+
 for (n in N) {
 for (shape3 in shapes3) {
+    iter_idx <- iter_idx + 1L
+    s3_key <- as.character(shape3)
+
+    # Flush batch when shape3 changes
+    if (!is.null(current_s3) && shape3 != current_s3) {
+      flush_batch()
+    }
+    current_s3 <- shape3
+
+    # Track running count for this shape3 value
+    if (is.null(running_counts[[s3_key]])) running_counts[[s3_key]] <- 0L
+    running_counts[[s3_key]] <- running_counts[[s3_key]] + 1L
+
+    # Skip if already completed
+    n_done <- if (!is.null(completed_counts[[s3_key]])) completed_counts[[s3_key]] else 0L
+    if (running_counts[[s3_key]] <= n_done) next
+
+    # Per-iteration reproducible seed
+    set.seed(2024 * 1000 + iter_idx)
     theta['shape3'] <- shape3
     shapes <- theta[seq(1, length(theta), 2)]
     scales <- theta[seq(2, length(theta), 2)]
@@ -29,45 +94,41 @@ for (shape3 in shapes3) {
     df <- generate_guo_weibull_table_2_data(
         shapes = shapes, scales = scales, n = n, p = p, tau = tau)
     tryCatch({
-        sol <- mle_lbfgsb_wei_series_md_c1_c2_c3(
-            theta0 = theta, df = df, hessian = FALSE,
-            control = list(maxit = max_iter, parscale = theta))
+        # Pre-decode data once
+        dd <- decode_data(df)
+
+        # Fit full model (vectorized)
+        sol <- fit_full_model(theta0 = theta, t = dd$t, delta = dd$delta,
+                              C = dd$C, max_iter = max_iter)
 
         shapes.mle <- sol$par[seq(1, length(theta), 2)]
         scales.mle <- sol$par[seq(2, length(theta), 2)]
-        k.hat <- mean(shapes.mle)    
+        k.hat <- mean(shapes.mle)
 
-        loglik.reduced <- function(df, k, scales, candset = "x",
-            lifetime = "t", right_censoring_indicator = "delta") {
-
-            theta <- rep(NA, length(scales) * 2)
-            for (i in 1:length(scales)) {
-                theta[2*(i-1) + 1] <- k
-                theta[2*(i-1) + 2] <- scales[i]
-            }
-            wei.series.md.c1.c2.c3::loglik_wei_series_md_c1_c2_c3(
-                df = df, theta = theta, candset = candset,
-                lifetime = lifetime, right_censoring_indicator = right_censoring_indicator)
-        }
-
-        sol.R <- stats::optim(
-            par = c(k.hat, scales.mle),
-            fn = function(theta) {
-                loglik.reduced(df = df, k = theta[1], scales = theta[-1])
-            },
-            control = list(fnscale = -1, maxit = max_iter))
+        # Fit reduced model (vectorized + L-BFGS-B with gradient)
+        sol.R <- fit_reduced_model(par0 = c(k.hat, scales.mle),
+                                   t = dd$t, delta = dd$delta, C = dd$C,
+                                   max_iter = max_iter)
 
         Lambda <- -2 * (sol.R$value - sol$value)
         p.value <- pchisq(Lambda, m-1, lower.tail = FALSE)
 
         cat("n =", n, ", shape3 =", shape3,  ", p-value =", p.value, ", Lambda =", Lambda, ", loglik.F =", sol$value, ", loglik.R =", sol.R$value, "\n")
 
-        write.table(
-            x = data.frame(n = n, pmask = p, q = q, shape3 = shape3, p.value = p.value, Lambda = Lambda,
-                           loglik.F = sol$value, loglik.R = sol.R$value),
-            file = csv.file, sep = ",", append = TRUE,
-            row.names = FALSE, col.names = FALSE)
+        # Accumulate result
+        batch_idx <- batch_idx + 1L
+        results_batch[[batch_idx]] <- data.frame(
+          n = n, pmask = p, q = q, shape3 = shape3, p.value = p.value, Lambda = Lambda,
+          loglik.F = sol$value, loglik.R = sol.R$value)
 
-    }, error = function(e) { print(e) })
+    }, error = function(e) {
+      n_errors <<- n_errors + 1
+      cat("[ERROR n=", n, "shape3=", shape3, "]", conditionMessage(e), "\n")
+    })
 }
 }
+# Flush remaining batch
+flush_batch()
+
+n_resumed <- sum(unlist(completed_counts))
+cat("Completed:", n_total - n_errors, "/", n_total, "successful (", n_errors, "errors,", n_resumed, "resumed)\n")
