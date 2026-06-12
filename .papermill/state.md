@@ -8,13 +8,26 @@ authors:
     orcid: "0000-0001-6443-9897"
 
 thesis:
-  claim: "We establish a structural decoupling between misspecification consequence and statistical detectability for common-shape Weibull series systems with masked, censored data. (i) Misspecification bias of the common-shape model is sample-size-independent and scales as O(CV^2) in shape heterogeneity by leading-order delta-method expansion. LRT detection scales with sample size at fixed CV: under Le Cam's contiguous alternatives, the detectable shape-CV threshold shrinks as 1/sqrt(n). Together this produces a CV ≈ 15% safe zone for any practical n, where the test lacks power precisely where prediction bias is negligible and reliably rejects the model before bias becomes engineering-significant. (ii) At moderate sample sizes the full model has lower MTTF MSE than the reduced model even when shapes are truly equal, because the common-shape constraint amplifies shape estimation error through the nonlinear MTTF functional. The case for the common-shape model rests on Weibull closure and engineering-adequate predictions, not parsimony-reduces-variance."
-  novelty: "First structural treatment of common-shape misspecification for Weibull series systems with masked data. Prior work (Lin-Guess-Usher, Sarhan, Tan) established estimation procedures; we establish when they are safe to use. Two contributions: (i) a decoupling theorem showing that misspecification bias and LRT detection scale differently in n, derived from the delta method and Le Cam contiguity, with empirical verification across CV from 0 to 30%; (ii) a counterexample to the textbook parsimony-reduces-variance intuition for system-level predictions, demonstrating that the common-shape constraint amplifies estimation error through the nonlinear MTTF functional even at CV=0."
-  refined: "2026-05-04"
+  claim: "Misspecification consequence and statistical detectability are structurally decoupled in sample size and coupled in heterogeneity for common-shape Weibull series models fit to masked, censored data. (i) The reduced model's relative MTTF bias is a sample-size-independent population quantity scaling as c_B*CV^2 at leading order (delta method; empirically c_B ~ 0.30-0.35, so bias < 1% through CV ~ 18%; verified n-stable across a 50x range of n). (ii) LRT detectability is governed by a noncentral chi-square with ncp ~ c_D*n*CV^2 (Le Cam local asymptotics; empirically c_D = 0.50 +/- 0.03 across n in [1000, 10000] and CV in [2.7%, 27%] at baseline masking p=0.215, censoring q=0.825), so the detectable-CV threshold falls as CV50 ~ 3.5/sqrt(n); log-log slope -0.468 vs theoretical -0.5. Corollary (two-regime safety): for n >~ 1000 the LRT rejects with >= 80% power before bias crosses 1%; for n <~ 500 the test under-detects but sampling error (4-10% RMSE) dominates the <= 3% specification bias, so model choice is second-order; over-rejection at very large n is harmless because switching to the full model costs nothing first-order. (iii) Zero-first-order-gain proposition: at any common-shape point (any scales), the common-shape constraint yields exactly zero first-order variance reduction for any functional of the system lifetime distribution (MTTF, R(t), quantiles); proved for complete data via the (k, eta=lambda^-k) parameterization, conjectured + empirically verified under masking/censoring (notes/zero-first-order-gain.md). Hence second-order effects decide the finite-n MSE ordering, and they favor the FULL model: at CV=0 the reduced model has strictly higher MTTF MSE (paired t=-3.65 at n=100, replicated in an independent dataset; ~7% RMSE penalty at n=100, ~1% at n=500-1000, vanishing at n=5000 as first-order theory requires). The case for the common-shape model is Weibull closure and engineering-adequate predictions, never statistical efficiency."
+  novelty: "First consequence analysis (engineering significance vs statistical detectability) for common-shape simplification of Weibull series systems under masked, censored data. Prior masked-data work (Usher, Lin-Guess, Sarhan, Tan, Guo; Craiu-Lee for masked competing risks) develops estimators and selection procedures but never quantifies when simplification is safe. Three contributions: (1) decoupling result with empirically calibrated constants (bias ~ 0.3*CV^2, ncp ~ 0.5*n*CV^2, CV50 ~ 3.5/sqrt(n)) and a 1-2 page derivation (delta method + Le Cam) that converts the single-baseline simulation into formulas evaluable at any design point; (2) zero-first-order-gain proposition: the common-shape constraint provides exactly zero asymptotic variance reduction for system-level functionals, explaining why the finite-n MSE ordering favors the full model and refuting parsimony-reduces-variance for system-level prediction (upgrade over the previous 'counterexample' framing: now a theorem with the simulation as confirmation); (3) honest empirical evaluation of LRT-pretest model selection in this setting, exhibiting the classic pretest-estimator risk hump at n=100 (worst case +17% RMSE at CV=27%) and its disappearance by n=500. Threats to novelty to verify in prior-art: focused information criterion (Claeskens-Hjort) selects on a focus functional like MTTF; pretest-estimation literature (Bancroft onward) owns the risk-hump phenomenon; equivalence-testing framings of practical significance. Differentiator: none of these address masked series-system data or the Weibull-closure-motivated common-shape reduction."
+  refined: "2026-06-10"
 
 prior_art:
-  last_survey: null
+  last_survey: "2026-06-10"
+  survey_report: ".papermill/reviews/2026-06-10/prior-art.md (18 ready BibTeX entries)"
   key_references:
+    - key: claeskens2003fic
+      role: "TOP NOVELTY THREAT: focused information criterion selects on focus-parameter MSE under local misspecification; Section 4.5 must engage and differentiate (fixed vs local misspecification)"
+    - key: bancroft1944
+      role: "Pretest estimation origin; Section 5's adaptive procedure is a pretest estimator, the n=100 risk hump is Bancroft's phenomenon (with judge1978, danilov2004, leeb2005)"
+    - key: mccool1975
+      role: "Closest prior art on testing equal Weibull shapes (multi-sample, no masking, no consequence analysis)"
+    - key: hart2024
+      role: "IEEE TR 2024/2025: estimation under common-shape Weibull competing risks assuming the model true; benign venue competitor, corroborates IEEE TR fit"
+    - key: aitchison1958
+      role: "Constrained-MLE asymptotics; foundation for the zero-first-order-gain proposition"
+    - key: pascual2005
+      role: "Cross-family Weibull misspecification MLE bias precedent (no series system, no masking)"
     - key: towell2025masked
       role: "Foundation paper: C1-C2-C3 likelihood framework (replaces stale towell2023reliability citation)"
     - key: towell2025weibull-fim
@@ -35,7 +48,7 @@ prior_art:
       role: "Closest comparator: model selection for masked competing-risks (non-series-system setting)"
     - key: burnham2002
       role: "Information-theoretic model selection (AIC/BIC)"
-  gaps: "Sarhan-2001/2004, Tan-2005/2007, Usher-1996, Lin-1996 are in refs.bib but uncited in v0.1.0. Per 2026-05-03 review, these need to be incorporated into Related Work."
+  gaps: "Sarhan-2001/2004, Tan-2005/2007, Usher-1996, Lin-1996 remain in refs.bib but uncited (still open per 2026-06-10 review). Genuinely novel after the 2026-06-10 survey: consequence-vs-detectability decoupling under fixed misspecification in the masked series setting; zero-first-order-gain proposition (no prior derivation found); calibrated safe-zone constants under masking/censoring. Referee question to pre-answer in the paper: why not apply FIC to MTTF directly."
 
 experiments:
   - name: "Consequence analysis"
@@ -83,8 +96,12 @@ experiments:
     location: "results/lrt/reduced1/, results/lrt/reduced2/, results/lrt/reduced3/"
   - name: "Theoretical scaling verification"
     description: "Verify O(CV^2) bias scaling (delta method) and 1/sqrt(n) detection threshold (Le Cam) against existing simulation data; basis for new Section 4.5"
-    status: planned
-    location: "results/lrt/divergence/, results/consequence/"
+    status: "verified 2026-06-10 (ncp = 0.50 +/- 0.03 * n * CV^2; CV50 ~ 3.5/sqrt(n); bias ~ 0.30-0.35 * CV^2); Section 4.5 prose not yet written"
+    location: "notes/verify-thesis-claims.py, results/lrt/divergence/, results/consequence/"
+  - name: "Zero-first-order-gain proposition"
+    description: "Constraint yields zero first-order variance reduction for system functionals at any common-shape point; complete-data derivation sketch + FIM-projection numerics; masked-case proof pending (papermill:proof)"
+    status: "verified numerically 2026-06-10; complete-data sketch done; masked-case proof and population KL-projection bias curve still to do"
+    location: "notes/zero-first-order-gain.md, notes/verify-zero-gain.py"
 
 venue:
   target: "IEEE Transactions on Reliability"
@@ -113,6 +130,10 @@ venue:
   notes: "Strategy: complete the ~3-day rework (add Section 4.5 deriving O(CV^2) bias and 1/sqrt(n) detection scaling, restructure §3 to elevate MSE counterexample, reframe §5 as empirical evaluation, citation hygiene), then mint Zenodo DOI in parallel with IEEE TR submission. Fallback: QREI (no further format conversion needed) then LDA."
 
 review_history:
+  - date: "2026-06-10"
+    agent: "papermill (inline lead-session review + surveyor agent; multi-agent orchestrator killed twice by account spend limit)"
+    verdict: "MAJOR REVISION toward thesis v4 (rework confirmed as the right move)"
+    notes: "Data-verification-first review. New findings: 1 critical (C2 assumption missing from Section 2.2 while Eq. 3 requires it), 7 major (White-1982 miscitation on the MSE mechanism, unqualified abstract alignment claim, wrong AIC mechanism in Appendix B, specification-vs-estimation bias conflation, MSE counterexample missing its n=5000 confirmation and error bars, unproved uniqueness claim, dropped R(t) results), 9 minor, 4 suggestions. All 2026-05-03 findings re-verified still open (draft unchanged since 2026-02-28). Every numeric claim in the draft re-verified against CSVs (ledger in review). Prior-art survey: FIC is top positioning threat; pretest literature owns the risk hump; McCool 1975 and Hart 2024/2025 must-cites; zero-first-order-gain proposition appears genuinely novel; 18 BibTeX entries ready. Reports at .papermill/reviews/2026-06-10/."
   - date: "2026-02-24"
     agent: "papermill:reviewer"
     verdict: "MAJOR REVISION"
@@ -187,6 +208,8 @@ review_history:
 
 ## Log
 
+- **2026-06-11**: Comprehensive review session completed (thesis -> prior-art -> review -> synthesis). Prior-art surveyor report and unified review at .papermill/reviews/2026-06-10/ (review.md, prior-art.md). Verdict: MAJOR REVISION toward v4; rework checklist in review.md maps each item to its v4 thesis element. Multi-agent reviewer orchestrator was killed twice by the account monthly spend limit; review completed inline by the lead session instead (specialist coverage preserved: logic, methodology, prose, citations, novelty, format; all numeric claims re-verified against CSVs). Paper builds clean at 11pp. Notable: working tree still uncommitted since 2026-02-28 (recommend committing before rework); qrei artifacts still not gitignored.
+- **2026-06-10**: Thesis refinement v4 via papermill:thesis (data-verification mode). All three v3 claims checked against simulation CSVs with paired MC tests (notes/verify-thesis-claims.py). (a) Detection scaling confirmed sharply: ncp = (0.50 +/- 0.03)*n*CV^2, CV50 ~ 3.5/sqrt(n), log-log slope -0.468 vs -0.5 theoretical. (b) Bias scaling: exponent ~ 2.15 at n=5000 over CV 5-41%, coefficient ~ 0.30-0.35; n=100 column contaminated by additive finite-sample estimation bias (visible at CV=0: +0.36%), which the draft never separates from specification bias. (c) MSE counterexample: real and replicated (consequence t=-3.65 at n=100; adaptive dataset t=-4.82, -3.07, -2.32) but vanishes at n=5000 (t=+0.24) consistent with first-order theory; mechanism is variance (VarR=417 > VarF=348 at n=100), not bias. NEW RESULT: zero-first-order-gain proposition derived (exact for complete data, any scales, via (k, eta) parameterization; numerically gap ~ 1e-5 even at scales 1500..300) and recorded in notes/zero-first-order-gain.md; upgrades the MSE 'surprise' from counterexample to theorem-corollary. v3's 'safe zone for any practical n' corrected to a two-regime safety statement (detection-led for n >~ 1000, noise-dominance for n <~ 500, with the honest pretest hump at n=100). Pretest-estimator and FIC literatures flagged as novelty threats for prior-art. IMPORTANT REPO STATE: working-tree paper.tex/qrei manuscript (mtime 2026-02-28, uncommitted) is the condensed 11pp draft the 2026-05-03 review evaluated; git HEAD still holds the longer Feb-26 draft; the planned v3 rework (Section 4.5 etc.) was never executed, so the draft still argues the v2 'alignment' thesis.
 - **2026-02-17**: Initialized papermill from existing draft.
 - **2026-02-18**: Thesis refinement: tightened CV boundary from <10% to <5% for strong robustness claim.
 - **2026-02-24**: Major rewrite after review. New title and structure: consequence analysis (Sec 3) + adaptive selection (Sec 5) as new contributions. Property 1 replaces Theorem 1. Old Sec 4 moved to Appendix A. Added 8 references.
