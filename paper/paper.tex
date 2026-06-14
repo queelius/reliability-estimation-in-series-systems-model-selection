@@ -17,16 +17,22 @@
 
 % Custom commands
 \renewcommand{\v}[1]{\boldsymbol{#1}}
+\newcommand{\CV}{\mathrm{CV}}
+\newcommand{\MTTF}{\mathrm{MTTF}}
 
 % Theorem environments
 \newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}{Proposition}[section]
 \newtheorem{property}{Property}[section]
+\newtheorem{corollary}{Corollary}[section]
 \newtheorem{remark}{Remark}[section]
 
 % Title and author information
-\title{When Does Model Simplification Matter?\\Consequence Analysis for Weibull Series Systems}
+\title{When Is Model Simplification Safe?\\
+Consequence and Detectability for Common-Shape\\
+Weibull Series Systems under Masked Data}
 \author{
-  \Large{Alex Towell} \\
+  \Large{Alexander Towell} \\
   Department of Computer Science \\
   Southern Illinois University Edwardsville \\
   \href{mailto:lex@metafunctor.com}{lex@metafunctor.com}
@@ -38,28 +44,38 @@
 \maketitle
 
 \begin{abstract}
-When a reliability engineer simplifies a series system model by assuming all components share a common Weibull shape parameter, how much accuracy is lost---and can the data even tell the difference? We show that these two questions have a favorably aligned answer: the likelihood ratio test's power outpaces the reduced model's prediction bias. The common-shape model's MTTF bias remains below 1\% through shape CV $\approx 15\%$, and by the time it reaches 1.5\% (CV $\approx 20\%$) the LRT already rejects at nearly 80\%. This means the test lacks power only where the consequence of using the wrong model is negligible. An adaptive LRT-based procedure exploits this alignment, achieving RMSE within 2.5\% of the full model at $n \geq 500$ while selecting the simpler model over 90\% of the time when appropriate. All results are obtained under realistic conditions of right-censored and masked failure data.
+A reliability engineer modeling a Weibull series system must choose between a full model with a separate shape parameter for each component and a parsimonious reduced model that assumes a common shape. We show that the two questions a practitioner actually cares about, how much accuracy the simplification costs and whether the data can detect the simplification is wrong, are structurally decoupled. The reduced model's prediction bias is a sample-size-independent population quantity that grows as $c_B\,\CV^2$ in the shape coefficient of variation (with $c_B \approx 0.28$ for our system), while the likelihood ratio test's detection power is governed by a noncentrality parameter that scales as $c_D\,n\,\CV^2$ (with $c_D \approx 0.5$), so the detectable shape-CV threshold falls as $\approx 3.5/\sqrt{n}$. We make this precise with a delta-method bias expansion and a Le Cam local-power derivation, and we explain it with a structural result: at any common-shape point the common-shape constraint yields \emph{exactly zero} first-order efficiency gain for system-level prediction. The same identity forces the misspecification bias to be second-order in heterogeneity (no linear term) and explains a counterintuitive finding, that at moderate sample sizes the full model has lower mean time-to-failure mean squared error than the reduced model \emph{even when the common shape is exactly correct}. The practical consequence is a two-regime safety rule: for $n \gtrsim 1000$ the test rejects the reduced model before its bias becomes engineering-significant, and for $n \lesssim 500$ sampling error dominates the small specification bias, so the choice barely matters. All results hold under right-censored and masked failure data satisfying the standard conditions of the masked-data likelihood framework.
 \end{abstract}
 
 \section{Introduction}
 
-Consider a turbine engine whose operation depends on bearings, seals, and blades arranged in series---any component failure grounds the engine. Field maintenance logs record the failure time and a short list of suspect components (the candidate set), but exact root-cause analysis requires costly teardown. Warranty programs further right-censor units still in service. The engineer faces a fundamental modeling choice: a full model with separate Weibull shape and scale parameters for each of $m$ components ($2m$ parameters), or a reduced model that assumes a common shape parameter across all components ($m+1$ parameters).
+Consider a turbine engine whose operation depends on bearings, seals, and blades arranged in series, so that any component failure grounds the engine. Field maintenance logs record the failure time and a short list of suspect components (the candidate set), but exact root-cause analysis requires costly teardown. Warranty programs further right-censor units still in service. The engineer faces a fundamental modeling choice: a full model with separate Weibull shape and scale parameters for each of $m$ components ($2m$ parameters), or a reduced model that assumes a common shape parameter across all components ($m+1$ parameters).
 
-The full model is more flexible but harder to estimate with limited masked data. The reduced model is more parsimonious and---uniquely among single-parameter reductions---renders the system lifetime itself Weibull \cite{barlow1975}, enabling closed-form reliability metrics. But is the simplification safe? The existing literature on this question focuses almost entirely on whether a likelihood ratio test can \emph{detect} the difference between models \cite{towell2023reliability}. This is the wrong question. The right question is: when the reduced model is wrong, does it produce predictions that are wrong enough to change an engineering decision?
+The full model is more flexible but harder to estimate from limited masked data. The reduced model is more parsimonious and, uniquely among single-shape reductions, renders the system lifetime itself Weibull \citep{barlow1975}, enabling closed-form reliability metrics. But is the simplification safe? The bulk of the masked-data literature develops \emph{estimators} for component reliability, by maximum likelihood \citep{Usher-1988, Lin-1993, Joh-1989, Usher-1996}, by Bayesian methods \citep{Lin-1996}, and for distributions beyond the Weibull \citep{Amma-2001, Amma-2004, Zhibi-2005, Zhibi-2007}; standard reliability texts \citep{lawless2003, meeker1998} treat the underlying lifetime models. The model-selection literature asks whether a test can \emph{detect} a difference between candidate models \citep{Craiu-2005, mccool1975}. Neither answers the question a practitioner actually faces: when the reduced model is wrong, does it produce predictions wrong enough to change an engineering decision, and if so, will the data warn us in time?
 
-\subsection{Related Work}
+\subsection{The decoupling}
 
-Maximum likelihood estimation from masked series system data has been developed through frequentist \cite{Usher-1988, Lin-1993, Joh-1989} approaches. Guo et al.\ \cite{Huairu-2013} provide the baseline system configuration used in our simulations, and Towell \cite{towell2023reliability} developed the likelihood model incorporating both right-censoring and candidate sets that we use throughout.
-
-The Weibull closure property under common shape is classical \cite{barlow1975}. Craiu and Lee \cite{Craiu-2005} addressed model selection for competing-risks models with masking, but not in the Weibull series system context. The model selection question---common shape versus heterogeneous shapes---has not, to our knowledge, been studied systematically for masked data, nor has the consequence of misspecification been quantified. We employ the likelihood ratio test \cite{wilks1938} and compare with AIC \cite{akaike1974} and BIC \cite{schwarz1978}.
+We show that prediction consequence and statistical detectability are governed by different mechanisms that scale differently in the sample size $n$. Writing $\CV$ for the coefficient of variation of the component shapes, our central findings are:
+\begin{itemize}
+\item \textbf{Consequence is sample-size independent and quadratic.} The reduced model's relative bias in system mean time-to-failure (MTTF) is a population quantity, $B \approx c_B\,\CV^2$ with $c_B \approx 0.28$, that does not shrink with $n$. It stays below $1\%$ through $\CV \approx 18\%$.
+\item \textbf{Detectability accumulates with $n$.} The likelihood ratio test (LRT) has noncentrality $\approx c_D\,n\,\CV^2$ with $c_D \approx 0.5$, so the smallest detectable $\CV$ falls as $\approx 3.5/\sqrt{n}$.
+\end{itemize}
+These are not two growth rates of the same quantity; they are two quantities with a shared geometric origin (Section~\ref{sec:theory}). The practical upshot is a two-regime safety rule rather than a single ``safe zone'': at large $n$ the test reliably rejects the reduced model before the bias matters, and at small $n$ the bias is dwarfed by sampling error, so the choice is second order either way.
 
 \subsection{Contributions}
 
 \begin{enumerate}
-\item \textbf{Bias-detectability alignment}: MTTF bias remains below 1\% through CV $\approx 15\%$; by CV $\approx 20\%$ (bias 1.5\%), the LRT already rejects at nearly 80\%. Surprisingly, the full model has lower MTTF variance than the reduced model at moderate sample sizes ($n \leq 1000$), even at CV $= 0$, because the nonlinear MTTF functional amplifies the constrained estimator's variance more than the unconstrained estimator's.
-
-\item \textbf{Adaptive model selection}: An LRT-based procedure exploits this alignment, achieving RMSE within 2.5\% of the always-full strategy at $n \geq 500$ while selecting the simpler model $> 90\%$ of the time when the data support it.
+\item \textbf{A decoupling result with calibrated constants.} We derive the $O(\CV^2)$ bias scaling by the delta method \citep{casella2002} and the $c_D\,n\,\CV^2$ detection scaling by Le Cam's local-alternative theory \citep{vandervaart1998}, and we calibrate both constants against simulation. This converts a single simulation study into formulas a practitioner can evaluate at any design point.
+\item \textbf{A zero-first-order-gain proposition.} At any common-shape parameter point, the common-shape constraint provides \emph{exactly zero} first-order asymptotic variance reduction for any functional of the system lifetime distribution (MTTF, reliability, quantiles). One identity (Section~\ref{sec:theory}) yields two consequences: the misspecification bias has no linear term (hence $O(\CV^2)$), and the finite-sample MSE ordering is decided at second order, where it favors the \emph{full} model. This refutes the textbook intuition that parsimony reduces variance, for system-level prediction.
+\item \textbf{An honest evaluation of pretest model selection.} The natural ``fit both, test, pick one'' procedure is a pretest estimator \citep{bancroft1944, judge1978}. We evaluate it (and its AIC and BIC analogues) and show it exhibits the classical pretest risk hump at $n=100$ but is nearly costless for $n \geq 500$, exactly as the decoupling predicts.
 \end{enumerate}
+
+\subsection{Relation to focused model selection and pretesting}
+\label{sec:fic}
+
+The closest framework is the focused information criterion (FIC) of \citet{claeskens2003fic, hjort2003fma}, which selects a model to minimize the estimated asymptotic MSE of a chosen ``focus'' functional, exactly the role MTTF plays here. FIC operates under \emph{local} misspecification, where the parameter departs from the submodel at rate $O(1/\sqrt{n})$, so bias and variance enter at the same order. Our consequence analysis instead treats \emph{fixed} misspecification, whose bias is $O(\CV^2)$ and independent of $n$ (the asymptotics of estimation under a misspecified parametric family go back to \citet{pascual2005} for the Weibull and \citet{White-1982} in general); this is what makes the bias an engineering quantity rather than an asymptotic one. The two views meet in our zero-first-order-gain proposition, which implies that an FIC comparison would favor the full model essentially everywhere, recovering our recommendation by a different route. FIC and its model-averaging relatives \citep{claeskens2008book} have been carried to Cox regression \citep{claeskens2006cox} but not, to our knowledge, to Weibull series systems or masked data; for the broader information-criterion view of model selection see \citet{burnham2002}. The pretest procedure of Section~\ref{sec:adaptive} is the classical pretest estimator \citep{bancroft1944, judge1978, giles1993, danilov2004}, and its small-sample risk hump and the non-uniformity of post-selection inference \citep{leeb2005} are well understood in general; our contribution is to quantify them in the masked Weibull series setting. Tests of common Weibull shape across independent samples date to \citet{mccool1975, mccool1979}; \citet{hart2024} studies estimation under a common-shape Weibull competing-risks model assuming it holds, complementary to our analysis of what happens when it does not.
+
+The paper is organized as follows. Section~\ref{sec:framework} sets up the model and data. Section~\ref{sec:consequences} quantifies the consequence of misspecification. Section~\ref{sec:lrt} characterizes detectability. Section~\ref{sec:theory} derives the decoupling and the zero-gain proposition. Section~\ref{sec:adaptive} evaluates pretest selection. Section~\ref{sec:conclusion} concludes.
 
 %% =========================================================================
 \section{Model Framework}
@@ -76,41 +92,44 @@ The system lifetime $T = \min\{T_1, \ldots, T_m\}$ has reliability function
 \label{eq:sys_reliability}
 R(t;\v\theta) = \exp\biggl\{-\sum_{j=1}^{m}\biggl(\frac{t}{\lambda_j}\biggr)^{k_j}\biggr\},
 \end{equation}
-with hazard $h(t;\v\theta) = \sum_j (k_j/\lambda_j)(t/\lambda_j)^{k_j-1}$ and density $f = h \cdot R$,
-where $\v\theta = (k_1, \lambda_1, \ldots, k_m, \lambda_m)$ is the full parameter vector and $\text{MTTF}_j = \lambda_j \Gamma(1 + 1/k_j)$.
+with hazard $h(t;\v\theta) = \sum_j (k_j/\lambda_j)(t/\lambda_j)^{k_j-1}$ and density $f = h \cdot R$, where $\v\theta = (k_1, \lambda_1, \ldots, k_m, \lambda_m)$ is the full parameter vector and $\MTTF_j = \lambda_j \Gamma(1 + 1/k_j)$. The shape governs the failure mode: $k_j>1$ gives an increasing hazard (wear-out), the regime of interest for aging components.
 
 \subsection{Masked and Censored Data}
+\label{sec:masked}
 
-We observe $n$ independent system lifetimes under two forms of incomplete information:
+We observe $n$ independent systems under two forms of incomplete information. \emph{Right-censoring}: system $i$ has indicator $\delta_i = 1$ if its failure time $t_i$ is observed and $\delta_i = 0$ if it is still operating at the end of observation. \emph{Masking}: for a failed system, instead of the true failed component $K_i$ we observe only a candidate set $C_i \subseteq \{1, \ldots, m\}$ of possible causes. We assume the three standard conditions of the masked-data likelihood framework \citep{towell2025masked}:
 \begin{itemize}
-\item \textbf{Right-censoring}: Some systems are still operating at the end of the observation period. For system $i$, $\delta_i = 1$ indicates failure and $\delta_i = 0$ indicates censoring.
-\item \textbf{Masking}: For failed systems, only a candidate set $C_i \subseteq \{1, \ldots, m\}$ of possible failure causes is observed, not the true failed component $K_i$. The candidate set always contains the true cause ($K_i \in C_i$), and the masking mechanism is non-informative about $\v\theta$ \cite{towell2023reliability}.
+\item[(C1)] \textbf{Containment:} the true cause is always in the candidate set, $\Pr(K_i \in C_i) = 1$.
+\item[(C2)] \textbf{Symmetry:} conditional on the failure time and on $K_i \in C_i$, the candidate set probability does not depend on which member of $C_i$ is the true cause.
+\item[(C3)] \textbf{Independence:} the masking mechanism does not depend on $\v\theta$.
 \end{itemize}
-
-The log-likelihood for the complete sample is
+Under C1--C3 the masking probabilities factor out of the likelihood and may be dropped, leaving
 \begin{equation}
 \label{eq:loglik}
-\ell(\v\theta) = \sum_{i=1}^{n} \left[ (1-\delta_i) \log R(t_i; \v\theta) + \delta_i \log \left( \sum_{j \in C_i} \frac{h_j(t_i)}{h(t_i; \v\theta)} \cdot f(t_i; \v\theta) \right) \right],
+\ell(\v\theta) = \sum_{i=1}^{n} \Bigl[ (1-\delta_i)\log R(t_i;\v\theta) + \delta_i\Bigl( \log R(t_i;\v\theta) + \log\!\!\sum_{j \in C_i} h_j(t_i;\v\theta) \Bigr) \Bigr],
 \end{equation}
-which is maximized numerically using the L-BFGS-B algorithm \cite{byrd1995} with analytical gradients. For details, see \cite{towell2023reliability}.
+where we used $\sum_{j\in C_i}(h_j/h)\,f = R\sum_{j\in C_i} h_j$. Conditions C1--C3 are the standard assumptions of the masked competing-risks literature \citep{reiser1995, flehinger1998, sen2001}, under which the masked-data likelihood reduces to the candidate-set form above. We maximize \eqref{eq:loglik} numerically with the L-BFGS-B algorithm \citep{byrd1995} using analytic gradients; see \citet{towell2025masked} for the framework and identifiability conditions.
 
 \subsection{The Common-Shape Model}
 
-The \emph{common-shape model} (reduced model) constrains all components to share a single shape parameter $k$, with parameter vector $\v\theta_R = (k, \lambda_1, \ldots, \lambda_m)$. This reduces the parameter count from $2m$ to $m+1$.
+The \emph{common-shape model} (reduced model) constrains all components to share a single shape $k$, with parameter vector $\v\theta_R = (k, \lambda_1, \ldots, \lambda_m)$, reducing the parameter count from $2m$ to $m+1$.
 
-\begin{property}[Weibull Closure {\cite{barlow1975}}]
+\begin{property}[Weibull Closure {\citep{barlow1975}}]
 \label{prop:weibull-closure}
-Let $T_1, \ldots, T_m$ be independent with $T_j \sim \text{Weibull}(k, \lambda_j)$. Then $T = \min\{T_1, \ldots, T_m\} \sim \text{Weibull}(k, \lambda_s)$ where $\lambda_s = (\sum_{j=1}^{m} \lambda_j^{-k})^{-1/k}$.
+Let $T_1, \ldots, T_m$ be independent with $T_j \sim \text{Weibull}(k, \lambda_j)$. Then $T = \min\{T_1, \ldots, T_m\} \sim \text{Weibull}(k, \lambda_s)$ with $\lambda_s = (\sum_{j=1}^{m} \lambda_j^{-k})^{-1/k}$.
 \end{property}
 
-The common-shape constraint is the \emph{only} single-parameter restriction that yields a Weibull system lifetime, making it the natural parsimony boundary. The key practical question is not whether the property holds exactly, but whether predictions from the common-shape model are adequate when shapes are \emph{approximately} equal.
+\begin{remark}[Uniqueness]
+\label{rem:uniqueness}
+Equality of all shapes is not merely sufficient for a Weibull system lifetime; it is necessary. The system cumulative hazard is $\sum_j (t/\lambda_j)^{k_j}$, a sum of power functions $t^{k_j}$. By the linear independence of distinct powers, this equals a single power $(t/\lambda_s)^{k_s}$ for all $t>0$ only if $k_1 = \cdots = k_m = k_s$. Thus the common-shape model is the unique reduction of the full model that preserves the Weibull property of the system, which is what makes it the natural parsimony boundary.
+\end{remark}
 
-In well-designed systems, components age similarly ($k_j \approx k$) but differ in durability ($\lambda_j$), making the common-shape model a physically motivated reduction.
+The practical question is not whether closure holds exactly, but whether the common-shape model's predictions are adequate when shapes are only \emph{approximately} equal. In well-designed systems components age similarly ($k_j \approx k$) but differ in durability ($\lambda_j$), so the common-shape model is physically motivated.
 
 \subsection{Baseline System and Simulation Design}
 \label{sec:baseline}
 
-We measure departure from shape homogeneity by the coefficient of variation $\text{CV}_k = \text{sd}(k_1,\ldots,k_m)/\text{mean}(k_1,\ldots,k_m)$. Throughout this paper, we use a 5-component baseline system from \cite{Huairu-2013} with $\text{CV}_k \approx 4\%$:
+We measure departure from shape homogeneity by the coefficient of variation $\CV = \mathrm{sd}(k_1,\ldots,k_m)/\mathrm{mean}(k_1,\ldots,k_m)$. Throughout, we use a 5-component baseline from \citet{Huairu-2013} with $\CV \approx 4\%$ (Table~\ref{tab:series-sys}).
 
 \begin{table}[htbp]
 \centering
@@ -118,7 +137,7 @@ We measure departure from shape homogeneity by the coefficient of variation $\te
 \label{tab:series-sys}
 \begin{tabular}{cccc}
 \hline
-Component $j$ & Shape $k_j$ & Scale $\lambda_j$ & MTTF$_j$ \\
+Component $j$ & Shape $k_j$ & Scale $\lambda_j$ & $\MTTF_j$ \\
 \hline
 1 & 1.2576 & 994.37 & $\approx 913$ \\
 2 & 1.1635 & 908.95 & $\approx 859$ \\
@@ -129,149 +148,223 @@ Component $j$ & Shape $k_j$ & Scale $\lambda_j$ & MTTF$_j$ \\
 \end{tabular}
 \end{table}
 
-All simulations use masking probability $p = 0.215$ and censoring quantile $q = 0.825$. To vary shape heterogeneity, we generate $m$ shapes uniformly spaced about a mean of 1.18 with a specified target CV. Because the shapes are discrete, the realized CV differs slightly from the target (e.g., target CV $= 10\%$ yields actual CV $\approx 13.7\%$). All tables and figures report the actual CV; approximate values are used in prose for readability. All simulations use the \texttt{wei.series.md.c1.c2.c3} R package \cite{towell2023weibull} with L-BFGS-B optimization \cite{byrd1995} and analytical gradients. A sensitivity analysis in \cite{towell2023reliability} shows that MLE precision depends strongly on component failure probability and that shape parameters are inherently harder to estimate than scale parameters---even without masking or censoring---both observations motivating the common-shape reduction studied here.
+Unless stated otherwise, simulations use masking probability $p = 0.215$ (each non-failed component enters the candidate set independently with probability $p$, satisfying C1--C3) and censoring at the $q = 0.825$ system-lifetime quantile, with 500 replications per condition. To vary shape heterogeneity we generate $m$ shapes equally spaced about a mean of $1.18$ at a target $\CV$; because the shapes are discrete the realized $\CV$ differs slightly from the target (target $\CV = 10\%$ yields actual $\CV \approx 13.7\%$). All tables report the actual $\CV$; prose uses approximate values for readability. All fits use the reference \texttt{wei.series.md.c1.c2.c3} implementation \citep{towell2023weibull} with analytic gradients; the optimizer settings and the handling of non-convergent replications are detailed in Appendix~\ref{app:sim}. A separate analysis of the masking-invariance and Fisher-information structure of the homogeneous model appears in \citet{towell2025weibull-fim}.
 
 %% =========================================================================
-\section{Consequence Analysis: Does Model Misspecification Matter?}
+\section{Consequence Analysis: Does Misspecification Matter?}
 \label{sec:consequences}
 
-The central question is not whether the common-shape model is statistically distinguishable from the full model, but whether it produces predictions that are wrong enough to affect engineering decisions. We quantify this by fitting the reduced model to data generated from heterogeneous-shape systems and measuring the resulting prediction errors.
+We fit the reduced model to data generated from heterogeneous-shape systems and measure the resulting prediction error. The key estimand is the system MTTF, $\MTTF = \int_0^\infty R(t;\v\theta)\,dt$; we also report the reliability $R(t)$ at $t = \MTTF/2,\ \MTTF,\ 2\,\MTTF$. The relative bias of an estimate $\hat M$ is $(\hat M - M_{\text{true}})/M_{\text{true}}$.
 
-\subsection{Simulation Design}
+\subsection{Specification bias is quadratic and sample-size independent}
 
-For each simulation replication, we compute the system MTTF $= \int_0^\infty R(t; \v\theta)\, dt$ under both the fitted full and reduced models, and measure the relative bias $(\widehat{\text{MTTF}} - \text{MTTF}_{\text{true}}) / \text{MTTF}_{\text{true}}$. We varied shape CV across 9 levels (0--30\%) and sample sizes $n \in \{100, 500, 1000, 5000\}$, with 500 replications per condition. Non-convergent fits (typically $< 3\%$; up to 10\% at extreme CV) are excluded.
-
-\subsection{Results}
-
-Table~\ref{tab:consequence} summarizes the reduced model's MTTF bias across shape CV and sample size.
+Table~\ref{tab:consequence} reports the reduced model's relative MTTF bias across shape $\CV$ and sample size, alongside the population (limiting, $n\to\infty$) specification bias obtained by projecting the heterogeneous truth onto the reduced family in Kullback--Leibler divergence (Appendix~\ref{app:sim}). Three patterns stand out.
 
 \begin{table}[htbp]
 \centering
-\caption{Reduced Model MTTF Bias (\%) and RMSE (in time units) by Actual Shape CV and Sample Size}
+\caption{Relative MTTF Bias (\%) of the Common-Shape Model by Actual Shape CV. The population column is the $n\to\infty$ specification bias; the finite-$n$ columns add finite-sample estimation bias, conspicuous at $\CV=0$ where specification bias is zero.}
 \label{tab:consequence}
 \small
-\begin{tabular}{ccccccccc}
+\begin{tabular}{cccccc}
 \hline
-& \multicolumn{2}{c}{$n=100$} & \multicolumn{2}{c}{$n=500$} & \multicolumn{2}{c}{$n=1000$} & \multicolumn{2}{c}{$n=5000$} \\
-CV (\%) & Bias & RMSE & Bias & RMSE & Bias & RMSE & Bias & RMSE \\
+CV (\%) & population & $n=100$ & $n=500$ & $n=1000$ & $n=5000$ \\
 \hline
-0.0 & $+$0.4 & 20.4 & $-$0.1 & 9.6 & $+$0.0 & 6.8 & $-$0.0 & 2.9 \\
-2.7 & $+$0.3 & 21.0 & $-$0.1 & 10.0 & $-$0.1 & 6.9 & $+$0.0 & 2.9 \\
-5.5 & $+$0.8 & 21.2 & $+$0.2 & 9.3 & $+$0.1 & 6.6 & $+$0.1 & 3.1 \\
-8.2 & $+$0.7 & 20.5 & $+$0.5 & 9.5 & $+$0.1 & 6.6 & $+$0.2 & 3.0 \\
-11.0 & $+$1.1 & 21.5 & $+$0.6 & 9.8 & $+$0.2 & 6.7 & $+$0.2 & 3.0 \\
-13.7 & $+$0.8 & 21.8 & $+$0.9 & 10.1 & $+$0.5 & 7.0 & $+$0.6 & 3.3 \\
-20.5 & $+$1.7 & 23.9 & $+$1.5 & 10.5 & $+$1.3 & 7.7 & $+$1.3 & 4.2 \\
-27.4 & $+$3.2 & 23.9 & $+$2.9 & 12.5 & $+$2.5 & 9.2 & $+$2.6 & 6.4 \\
-41.1 & $+$10.5 & 37.4 & $+$10.1 & 23.1 & $+$9.8 & 20.8 & $+$9.3 & 18.2 \\
+0.0 & $+0.00$ & $+0.36$ & $-0.10$ & $+0.04$ & $-0.04$ \\
+2.7 & $+0.02$ & $+0.30$ & $-0.09$ & $-0.12$ & $+0.04$ \\
+5.5 & $+0.08$ & $+0.80$ & $+0.20$ & $+0.07$ & $+0.14$ \\
+8.2 & $+0.18$ & $+0.74$ & $+0.45$ & $+0.09$ & $+0.19$ \\
+11.0 & $+0.32$ & $+1.10$ & $+0.62$ & $+0.24$ & $+0.22$ \\
+13.7 & $+0.52$ & $+0.85$ & $+0.89$ & $+0.50$ & $+0.55$ \\
+20.5 & $+1.31$ & $+1.65$ & $+1.49$ & $+1.29$ & $+1.32$ \\
+27.4 & $+2.94$ & $+3.22$ & $+2.93$ & $+2.52$ & $+2.59$ \\
+41.1 & --- & $+10.5$ & $+10.1$ & $+9.8$ & $+9.3$ \\
 \hline
 \end{tabular}
 \end{table}
 
-Three patterns emerge. First, the reduced model's MTTF bias is remarkably small: below 1\% through shape CV $\approx 14\%$ at $n \geq 500$, and the 1\% threshold is not crossed until CV $\approx 20\%$ (bias $= 1.5\%$). Only at CV $> 27\%$ does the bias exceed 2.5\%. Second, the bias is almost entirely positive---the reduced model systematically overestimates MTTF because the common-shape fit overestimates the weaker components. Third, the bias is largely independent of sample size: a 50-fold increase from $n = 100$ to $n = 5000$ changes the bias at CV $\approx 27\%$ from $+3.2\%$ to $+2.6\%$, confirming that this is a specification bias, not a finite-sample artifact.
-
-\subsection{Discussion}
-
-A surprising finding is that the full model has lower MSE than the reduced model at moderate sample sizes ($n \leq 1000$)---even when the reduced model is correctly specified (CV $= 0$). A bias-variance decomposition reveals the mechanism: the constraint $k_1 = \cdots = k_m$ forces all shape estimation error into a single degree of freedom, which propagates through the nonlinear MTTF integral with greater amplification than the distributed errors of the unconstrained estimator \cite{White-1982}. The traditional argument that parsimony reduces variance holds for the shape parameters themselves, but not for the system MTTF. The case for the common-shape model rests instead on interpretability, the Weibull closure property, and the empirical observation that its predictions are accurate enough for engineering use when shape heterogeneity is modest.
-
-Figure~\ref{fig:alignment} reveals the quantitative alignment between detectability and consequence. The LRT's power curve rises faster than the bias curve: by the time the MTTF bias reaches engineering-significant levels, the LRT already rejects reliably. This rate asymmetry is what makes the adaptive procedure in Section~\ref{sec:adaptive} effective.
+First, the specification bias is small and positive (the common-shape fit overestimates the weaker components, inflating MTTF) and stays below $1\%$ through $\CV \approx 18\%$. Second, it is essentially independent of $n$: a 50-fold increase from $n=100$ to $n=5000$ leaves the bias at $\CV\approx 27\%$ near $+2.6\%$, confirming a specification effect rather than a finite-sample artifact. Third, the population curve makes the decomposition explicit: the $+0.36\%$ in the $n=100$ column at $\CV=0$, where there is \emph{no} specification bias, is pure finite-sample estimation bias, additive to and distinct from the specification bias that the rest of the column conflates with it. Figure~\ref{fig:popbias} shows the population bias is quadratic in $\CV$ with no linear term, $B \approx 0.28\,\CV^2$, a fact we derive in Section~\ref{sec:theory}. The reliability predictions behave similarly: at $n=1000$, $R(t)$ relative bias stays below $1\%$ in magnitude through $\CV\approx 14\%$ at all three horizons, with the deep tail $R(2\,\MTTF)$ the most sensitive (Table~\ref{tab:rt-bias}).
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.85\textwidth]{image/consequence_focused.pdf}
-\caption{The alignment between prediction consequence and statistical detectability at $n = 500$. Left axis (blue): MTTF bias of the reduced model. Right axis (red): LRT rejection rate. The green band marks the $\pm 1\%$ engineering-acceptable bias zone. Detection power outpaces prediction bias: the test lacks power precisely where bias is negligible, and reaches high power before bias becomes engineering-significant.}
-\label{fig:alignment}
+\includegraphics[width=0.72\textwidth]{image/population_bias.pdf}
+\caption{Population (limiting) specification bias of the common-shape model versus shape CV, from the Kullback--Leibler projection under masking and censoring (blue), with simulated $n=5000$ bias (orange) and the quadratic fit $0.28\,\CV^2$. The bias vanishes to second order: there is no linear term (Section~\ref{sec:theory}), so it stays inside the $\pm 1\%$ engineering band through $\CV\approx 18\%$.}
+\label{fig:popbias}
 \end{figure}
-
-%% =========================================================================
-\section{Likelihood Ratio Testing}
-\label{sec:lrt}
-
-We employ the likelihood ratio test (LRT) with statistic
-\begin{equation}
-\Lambda = -2 (\ell(\hat{\v\theta}_R) - \ell(\hat{\v\theta}_F)),
-\end{equation}
-which is asymptotically $\chi^2_{m-1}$ under the null hypothesis $H_0: k_1 = \cdots = k_m$ \cite{wilks1938}.
-
-\subsection{Type I Error and Power}
-
-Under perfect homogeneity ($\text{CV}_k = 0$), the LRT rejection rate ranges from 4.6\% to 6.8\% across all sample sizes tested ($n = 100$ to $10{,}000$), confirming well-calibrated Type~I error at the nominal $\alpha = 0.05$.
-
-Table~\ref{tab:power-by-cv} presents the LRT rejection rate (power) as a function of shape CV for different sample sizes.
 
 \begin{table}[htbp]
 \centering
-\caption{LRT Rejection Rate by Divergence Level and Sample Size}
+\caption{Relative Bias (\%) of Common-Shape $R(t)$ Predictions at $n=1000$}
+\label{tab:rt-bias}
+\small
+\begin{tabular}{cccc}
+\hline
+CV (\%) & $R(\MTTF/2)$ & $R(\MTTF)$ & $R(2\,\MTTF)$ \\
+\hline
+0.0 & $+0.03$ & $-0.01$ & $-0.08$ \\
+5.5 & $-0.09$ & $-0.15$ & $+0.19$ \\
+11.0 & $-0.27$ & $-0.41$ & $+0.83$ \\
+13.7 & $-0.38$ & $-0.52$ & $+1.65$ \\
+20.5 & $-0.86$ & $-1.04$ & $+3.81$ \\
+27.4 & $-1.53$ & $-1.82$ & $+6.08$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{The full model can have lower MSE, even when shapes are equal}
+\label{sec:mse}
+
+A counterintuitive finding emerges at $\CV = 0$, where the reduced model is \emph{correctly specified}. Table~\ref{tab:mse} shows that the full model has lower MTTF root-mean-squared error at moderate sample sizes, with the gap statistically significant by a paired test at $n=100$. The mechanism is variance, not bias: at $n=100$ the constrained estimator's MTTF variance is about $20\%$ larger than the unconstrained estimator's, while the squared bias of both is negligible (and what little there is favors the reduced model). The variance inflation shrinks with $n$ and is gone by $n=5000$. This is not a small-sample curiosity to be explained away; it is the finite-$n$ shadow of an exact structural fact, that the common-shape constraint buys \emph{zero} first-order variance reduction for system MTTF, which we prove in Section~\ref{sec:theory}. The traditional argument that parsimony reduces variance holds for the shape parameters themselves but not for the nonlinear system functional built from them.
+
+\begin{table}[htbp]
+\centering
+\caption{MTTF Error at $\CV = 0$ (reduced model correctly specified). RMSE as \% of true MTTF; paired $t$ on per-replication squared-error difference (negative favors the full model); variance ratio of the two MTTF estimators.}
+\label{tab:mse}
+\small
+\begin{tabular}{ccccc}
+\hline
+$n$ & RMSE full (\%) & RMSE reduced (\%) & paired $t$ & $\mathrm{Var}_R/\mathrm{Var}_F$ \\
+\hline
+100 & 8.6 & 9.2 & $-3.65$ & 1.20 \\
+500 & 4.3 & 4.3 & $-1.80$ & 1.03 \\
+1000 & 3.0 & 3.1 & $-1.84$ & 1.02 \\
+5000 & 1.3 & 1.3 & $+0.24$ & 1.00 \\
+\hline
+\end{tabular}
+\end{table}
+
+%% =========================================================================
+\section{Detectability: Likelihood Ratio Testing}
+\label{sec:lrt}
+
+We test $H_0: k_1 = \cdots = k_m$ with the likelihood ratio statistic
+\begin{equation}
+\Lambda = -2\bigl(\ell(\hat{\v\theta}_R) - \ell(\hat{\v\theta}_F)\bigr),
+\end{equation}
+asymptotically $\chi^2_{m-1}$ under $H_0$ \citep{wilks1938}; the null is interior (the common shape is positive), so the standard regularity conditions hold and there is no boundary correction.
+
+\subsection{Type I error and power}
+
+Under perfect homogeneity ($\CV = 0$) the rejection rate ranges from $4.6\%$ to $6.8\%$ across $n$ from $100$ to $10{,}000$. With 500 replications the binomial standard error is about $1\%$, so every value is consistent with the nominal $\alpha = 0.05$; the test is well calibrated. Table~\ref{tab:power-by-cv} reports power as a function of shape $\CV$.
+
+\begin{table}[htbp]
+\centering
+\caption{LRT Rejection Rate by Shape CV and Sample Size (500 replications; binomial SE $\leq 0.022$)}
 \label{tab:power-by-cv}
 \small
 \begin{tabular}{cccccc}
 \hline
-CV (\%) & $n = 100$ & $n = 500$ & $n = 1000$ & $n = 5000$ & $n = 10000$ \\
+CV (\%) & $n=100$ & $n=500$ & $n=1000$ & $n=5000$ & $n=10000$ \\
 \hline
 0.0 & 0.054 & 0.056 & 0.046 & 0.068 & 0.046 \\
 2.7 & 0.048 & 0.062 & 0.052 & 0.186 & 0.268 \\
 5.5 & 0.075 & 0.072 & 0.130 & 0.541 & 0.887 \\
 8.2 & 0.074 & 0.126 & 0.266 & 0.936 & 0.996 \\
 11.0 & 0.088 & 0.252 & 0.494 & 0.996 & 1.000 \\
+13.7 & 0.129 & 0.385 & 0.690 & 1.000 & 1.000 \\
+20.5 & 0.200 & 0.790 & 0.968 & 1.000 & 1.000 \\
 \hline
 \end{tabular}
 \end{table}
 
-The key observation: at CV $\leq 5\%$, the LRT has almost no power at practical sample sizes ($n \leq 1000$). Even at $n = 10{,}000$, the rejection rate at CV $= 2.7\%$ is only 27\%. Combined with the consequence analysis showing that prediction bias is negligible in this regime, the case for the common-shape model is strong.
-
-Appendix~\ref{app:data-quality} examines how masking probability, censoring level, and system complexity affect LRT power. In brief: masking has the largest impact ($6\times$ power reduction from $p = 0.05$ to $p = 0.70$), followed by censoring ($2.5\times$), but neither factor inflates the Type~I error rate. Appendix~\ref{app:aic-bic} compares the LRT with AIC and BIC; the LRT is well-calibrated (4.6--6.8\% Type~I error at $\alpha = 0.05$), while AIC is liberal (${\approx}\,2\times$) and BIC over-conservative (${\leq}\,0.2\%$).
+At $\CV \leq 5\%$ the test has little power at practical sample sizes ($n \leq 1000$); even at $n = 10{,}000$ the rejection rate at $\CV = 2.7\%$ is only $0.27$. Combined with the consequence analysis, where bias is negligible in this regime, the case for the common-shape model is strong precisely where the test cannot reject it. Appendix~\ref{app:data-quality} examines how masking, censoring, and system size affect power: masking has the largest effect ($6\times$ power reduction from $p=0.05$ to $0.70$), then censoring ($2.5\times$), then component count, with no inflation of Type I error. Appendix~\ref{app:aic-bic} compares the LRT with AIC and BIC.
 
 %% =========================================================================
-\section{Adaptive Model Selection}
+\section{Theoretical Analysis: Why Bias and Detection Decouple}
+\label{sec:theory}
+
+The empirical patterns of Sections~\ref{sec:consequences} and \ref{sec:lrt}, quadratic $n$-free bias, $\sqrt{n}$-shrinking detectability, and a full model that wins at $\CV=0$, all follow from a single geometric fact about the common-shape constraint. We state it, prove its consequences, and calibrate the constants.
+
+\subsection{A conjugacy identity}
+
+Work at a common-shape point $\v\theta_0$ with $k_1=\cdots=k_m=k$ and arbitrary scales, and reparameterize each component by $(k_j, \eta_j)$ with $\eta_j = \lambda_j^{-k_j}$, so the system cumulative hazard is $H(t) = \sum_j \eta_j t^{k_j}$, which at the common-shape point is $s\,t^k$ with $s = \sum_j \eta_j$. Let $g$ be any smooth functional of the system lifetime distribution (MTTF, $R(t)$ at a fixed $t$, a quantile), let $I$ be the Fisher information at $\v\theta_0$, and let $V = \{v : \text{the } k\text{-block of } v \text{ is constant across components}\}$ be the reduced model's tangent space embedded in the full $2m$-dimensional space.
+
+\begin{proposition}[Conjugacy identity]
+\label{prop:conjugacy}
+At any common-shape point, $I^{-1}\nabla g \in V$; equivalently, $\nabla g$ is $I$-conjugate to the shape-contrast directions, $\nabla g^\top I^{-1} A^\top = 0$, where $A$ is the $(m-1)\times 2m$ contrast operator whose rows encode $k_l - k_{l+1} = 0$.
+\end{proposition}
+
+\begin{proof}[Proof sketch]
+Two structural facts close the argument in a two-dimensional subspace. (i) \emph{Gradient structure.} Because $g$ depends on $\v\theta$ only through the system law, and at the common-shape point the cumulative hazard is $s\,t^k$, $g$ depends on $\v\eta$ only through the sum $s$; hence $\partial g/\partial \eta_l = c_\eta$ is the same for all $l$, while $\partial H/\partial k_l = \eta_l t^k\log t$ gives $\partial g/\partial k_l = c_k\,\eta_l$. So $\nabla g = (c_\eta\,\v 1,\ c_k\,\v\eta)$ lies in $P := \mathrm{span}\{(\v 1, \v 0), (\v 0, \v\eta)\}$. (ii) \emph{Information structure.} A direct computation of the complete-data score outer products at the common-shape point gives
+\[
+I_{\eta\eta} = \tfrac1s\,\mathrm{diag}(\v\eta^{-1}),\quad
+I_{\eta k} = \tfrac1k(c_1 I_m + \kappa\,\v 1\v\eta^\top),\quad
+I_{kk} = \tfrac1{k^2}\bigl(\tfrac{e_2}{s}\mathrm{diag}(\v\eta) + \psi\,\v\eta\v\eta^\top\bigr)
+\]
+for scalars $c_1,\kappa,e_2,\psi$ depending only on $s$. These four blocks map $U := \mathrm{span}\{(\v\eta, \v 0), (\v 0, \v 1)\}$ into $P$. Since $\dim U = \dim P = 2$ and $I$ is invertible, $I: U \to P$ is a bijection, so $I^{-1}: P \to U$, and as $\nabla g \in P$ we get $I^{-1}\nabla g \in U$, every member of which has a constant $k$-block. The full computation, including the masked, censored case, is in Appendix~\ref{app:proof}.
+\end{proof}
+
+Under masking and censoring the gradient structure is unchanged, and the four block proportionalities the proof needs continue to hold; we verify this to Monte Carlo precision for the baseline design ($3\times 10^6$ simulated observations), and the resulting first-order variance gain is below $10^{-5}$ in every configuration tested (Appendix~\ref{app:proof}).
+
+\subsection{Consequence 1: zero efficiency gain and the MSE ordering}
+
+By the theory of constrained maximum likelihood \citep{aitchison1958, silvey1959}, imposing a true constraint changes the asymptotic variance of $g$ from $\mathrm{var}_F = \nabla g^\top I^{-1}\nabla g$ to $\mathrm{var}_R = \mathrm{var}_F - \nabla g^\top I^{-1} A^\top (A I^{-1} A^\top)^{-1} A I^{-1}\nabla g$. The subtracted gain vanishes exactly when $A I^{-1}\nabla g = 0$, which is the conjugacy identity. Hence:
+
+\begin{corollary}
+\label{cor:zerogain}
+Imposing the (true) common-shape constraint yields exactly zero first-order asymptotic variance reduction for any system-level functional, at any scale configuration.
+\end{corollary}
+
+So parsimony buys no first-order efficiency for system-level prediction, and the finite-$n$ MSE ordering is decided at second order. The simulations of Section~\ref{sec:mse} show the second-order effect favors the full model: the pooled common-shape error is coherent across components (one shape error shifts all $m$ cumulative hazards the same way), whereas the full model's $m$ shape errors partially diversify inside the nonlinear system functional. This is why $\mathrm{Var}_R > \mathrm{Var}_F$ at $n=100$ and why the gap vanishes as $n$ grows, exactly as Corollary~\ref{cor:zerogain} requires.
+
+\subsection{Consequence 2: the bias has no linear term}
+
+Let the true shapes be $k_l = \bar k + \delta_l$ with $\sum_l \delta_l = 0$, so $\CV \propto \|\v\delta\|$. The reduced model's pseudo-true parameter is the KL projection of the truth onto $V$, and to first order it equals the $I$-orthogonal projection of the parameter shift onto $V$. The MTTF bias $B(\v\delta) = g(\v\theta_R^\ast(\v\delta)) - g(\v\theta_{\text{true}}(\v\delta))$ then has derivative $\partial B/\partial\delta_j = \nabla g\cdot(P_V^I e_{k_j} - e_{k_j})$ at $\v\delta = 0$. The vector $r = P_V^I e_{k_j} - e_{k_j}$ is $I$-orthogonal to $V$, and since $I^{-1}\nabla g \in V$ by Proposition~\ref{prop:conjugacy}, $\nabla g\cdot r = (I^{-1}\nabla g)^\top I r = 0$.
+
+\begin{corollary}
+\label{cor:bias}
+The misspecification bias of any system-level functional has no linear term in the shape heterogeneity: $B(\v\delta) = O(\|\v\delta\|^2) = O(\CV^2)$.
+\end{corollary}
+
+The same identity that nullifies the variance gain nullifies the linear bias. The deterministic KL projection confirms it: the population bias at $\CV=0$ is $+0.002\%$ (numerically zero), forward and reversed shape perturbations give identical bias (the bias is even in $\v\delta$), and the leading coefficient is $c_B \approx 0.28$ (Figure~\ref{fig:popbias}).
+
+\subsection{Detectability and the decoupling}
+
+The detection side is governed by the same matrix $A I^{-1} A^\top$ but enters differently. Under local alternatives $k_l = \bar k + \delta_l$ with $\|\v\delta\| = O(n^{-1/2})$, the LRT statistic is asymptotically noncentral $\chi^2_{m-1}$ with noncentrality $\mathrm{ncp} = (A\v\delta)^\top (A I^{-1} A^\top)^{-1} (A\v\delta)$ \citep{vandervaart1998}, which scales as $c_D\,n\,\CV^2$. Fitting against the simulations gives $c_D \approx 0.5$ (the per-observation theoretical value is $0.49$), stable across $n \in [10^3, 10^4]$ and $\CV \in [2.7\%, 27\%]$. Figure~\ref{fig:decoupling}(a) shows that plotting power against $n\,\CV^2$ collapses every $(n,\CV)$ condition onto a single noncentral-$\chi^2$ curve, and Figure~\ref{fig:decoupling}(b) shows the resulting detectable threshold falling as $\CV_{50} \approx 3.5/\sqrt{n}$ (fitted log-log slope $-0.47$ versus the theoretical $-0.5$).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{image/decoupling_ncp_collapse.pdf}
+\caption{(a) The LRT power for every sample size and heterogeneity level collapses onto one noncentral-$\chi^2_4$ curve when plotted against $n\,\CV^2$, confirming noncentrality $\approx 0.5\,n\,\CV^2$. (b) The detectable shape-CV threshold (50\% power) falls as $\approx 3.5/\sqrt{n}$.}
+\label{fig:decoupling}
+\end{figure}
+
+The decoupling is now transparent. Bias is a population quantity, $O(\CV^2)$ and free of $n$ (Corollary~\ref{cor:bias}); detectability accumulates with information, $O(n\,\CV^2)$. They share the shape geometry but scale differently in $n$. Two practical regimes follow:
+\begin{itemize}
+\item \textbf{$n \gtrsim 1000$ (detection-led):} the detectable threshold $\CV_{50}\approx 3.5/\sqrt{n}$ sits well below the $\CV\approx 18\%$ bias boundary, so the test rejects the reduced model before its bias becomes engineering-significant.
+\item \textbf{$n \lesssim 500$ (noise-dominated):} the test rarely rejects, but the specification bias ($\leq 3\%$ through $\CV\approx 27\%$) is dwarfed by sampling error (RMSE $4$ to $10\%$), so the model choice is second order regardless.
+\end{itemize}
+At very large $n$ the test may reject even trivially small heterogeneity, but Corollary~\ref{cor:zerogain} shows switching to the full model then costs nothing to first order. This is the structural answer behind the FIC discussion of Section~\ref{sec:fic}: an MSE-focused comparison favors the full model essentially everywhere, while the closed-form bias and power formulas above serve the engineering decision directly at any fixed $n$.
+
+%% =========================================================================
+\section{Model Selection in Practice}
 \label{sec:adaptive}
 
-\subsection{Procedure}
+Faced with data from an unknown system, the natural procedure is a pretest estimator \citep{bancroft1944, judge1978}: fit both models, compute $\Lambda$, use the reduced model if $\Lambda < \chi^2_{m-1,\,1-\alpha}$ and the full model otherwise. This is not a new method, and its risk properties are governed by the classical pretest theory; our question is how that theory plays out here, given the decoupling.
 
-Given data from an unknown system, we evaluate a natural LRT-based adaptive procedure: fit both models, compute $\Lambda = -2(\ell(\hat{\v\theta}_R) - \ell(\hat{\v\theta}_F))$, and use the reduced model if $\Lambda < \chi^2_{m-1, 1-\alpha}$. Under the null, this selects the reduced model with probability $1 - \alpha$.
+\subsection{Strategies and results}
 
-\subsection{Simulation Design}
-
-We compare three strategies:
-\begin{enumerate}
-\item \textbf{Always-full}: use full model estimates regardless
-\item \textbf{Always-reduced}: use reduced model estimates regardless
-\item \textbf{Adaptive (LRT)}: select model via the LRT at $\alpha = 0.05$
-\end{enumerate}
-
-We evaluate on MTTF estimation accuracy (MSE, bias) across shape CV from 0 to 20\% and sample sizes $n \in \{100, 500, 1000\}$, with 500 replications per condition. Non-convergent fits are excluded (typically $< 2\%$ of replications).
-
-\subsection{Results}
-
-Table~\ref{tab:adaptive} presents the RMSE of each strategy as a percentage of the true system MTTF, along with the fraction of replications where the LRT-based adaptive procedure selects the reduced model. Figure~\ref{fig:adaptive} provides the corresponding visualization.
+We compare always-full, always-reduced, and pretest selection by the LRT, and for completeness the AIC and BIC pretest variants (reduced if $\Lambda$ is below $2(m-1)$ and $(m-1)\log n$, respectively), on MTTF RMSE across $\CV$ from $0$ to $27\%$ at $n \in \{100,500,1000\}$. Table~\ref{tab:adaptive} reports representative results.
 
 \begin{table}[htbp]
 \centering
-\caption{Adaptive Model Selection: RMSE (\% of True MTTF) and Selection Rate}
+\caption{MTTF RMSE (\% of true MTTF) by Strategy. ``Sel.\ R.'' is the LRT pretest's reduced-selection rate.}
 \label{tab:adaptive}
 \small
-\begin{tabular}{cccccc}
+\begin{tabular}{ccccccccc}
 \hline
-CV (\%) & $n$ & Full & Reduced & Adaptive & Sel.~Red. (\%) \\
+CV (\%) & $n$ & Full & Reduced & LRT & AIC & BIC & Sel.\ R.\ (\%) \\
 \hline
-0.0 & 100 & 9.3 & 10.1 & 10.0 & 93 \\
-    & 500 & 4.6 & 4.7 & 4.7 & 95 \\
-    & 1000 & 3.0 & 3.0 & 3.0 & 94 \\
+0.0 & 100 & 9.3 & 10.1 & 10.0 & 10.0 & 10.1 & 93 \\
+ & 500 & 4.6 & 4.7 & 4.7 & 4.7 & 4.7 & 95 \\
+ & 1000 & 3.0 & 3.0 & 3.0 & 3.0 & 3.0 & 94 \\
 \hline
-5.5 & 100 & 9.3 & 10.1 & 10.1 & 95 \\
-    & 500 & 4.1 & 4.2 & 4.2 & 92 \\
-    & 1000 & 3.0 & 3.0 & 3.1 & 89 \\
+13.7 & 100 & 9.5 & 10.4 & 10.3 & 10.2 & 10.4 & 89 \\
+ & 500 & 4.3 & 4.5 & 4.4 & 4.4 & 4.5 & 60 \\
+ & 1000 & 3.0 & 3.2 & 3.0 & 3.0 & 3.1 & 30 \\
 \hline
-13.7 & 100 & 9.5 & 10.4 & 10.3 & 89 \\
-     & 500 & 4.3 & 4.5 & 4.4 & 60 \\
-     & 1000 & 3.0 & 3.2 & 3.0 & 30 \\
-\hline
-20.5 & 100 & 9.5 & 10.7 & 10.4 & 83 \\
-     & 500 & 4.4 & 4.9 & 4.5 & 21 \\
-     & 1000 & 3.2 & 3.6 & 3.2 & 1 \\
-\hline
-27.4 & 100 & 9.9 & 12.8 & 11.6 & 65 \\
-     & 500 & 4.6 & 5.6 & 4.7 & 1 \\
-     & 1000 & 3.3 & 4.4 & 3.3 & 0 \\
+27.4 & 100 & 9.9 & 12.8 & 11.6 & 11.1 & 12.2 & 65 \\
+ & 500 & 4.6 & 5.6 & 4.7 & 4.7 & 5.2 & 1 \\
+ & 1000 & 3.3 & 4.4 & 3.3 & 3.3 & 3.4 & 0 \\
 \hline
 \end{tabular}
 \end{table}
@@ -279,53 +372,52 @@ CV (\%) & $n$ & Full & Reduced & Adaptive & Sel.~Red. (\%) \\
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.85\textwidth]{image/adaptive_selection.pdf}
-\caption{Adaptive model selection. (a)~Selection rate: the LRT correctly selects the reduced model near 95\% at CV~$= 0$ and transitions smoothly to the full model as CV increases, with the transition point shifting left with sample size. (b)--(c)~RMSE comparison at $n = 500$ and $n = 100$: the adaptive procedure (green) tracks the better of the two static strategies across all CVs. (d)~Relative RMSE: the adaptive procedure's overhead ranges from 8--18\% at $n = 100$ and is under 2.5\% at $n = 500$.}
+\caption{Pretest model selection. (a) Selection rate: the LRT pretest selects the reduced model near $95\%$ at $\CV = 0$ and transitions to the full model as heterogeneity grows, the transition shifting left with $n$. (b)--(c) RMSE at $n=500$ and $n=100$: the pretest tracks the better static strategy. (d) Relative RMSE overhead: under $2.5\%$ at $n=500$, $6$ to $18\%$ at $n=100$.}
 \label{fig:adaptive}
 \end{figure}
 
-The adaptive procedure selects the reduced model $> 90\%$ of the time at low CV and transitions smoothly to the full model as heterogeneity increases. The RMSE overhead relative to always-full is at most 2.4\% at $n = 500$. At $n = 100$ the overhead is larger (8--18\%) because the LRT lacks power, but the consequence analysis (Table~\ref{tab:consequence}) shows the reduced model's bias is still moderate at those CVs.
+The LRT pretest tracks the better static strategy. Its RMSE overhead relative to always-full is at most $2.4\%$ at $n=500$ and $n=1000$, but reaches $18\%$ at $n=100$ and $\CV\approx 27\%$: this is the classical pretest risk hump \citep{judge1978}, occurring where the test lacks the power to switch away from the now-biased reduced model. The AIC pretest behaves almost identically (its more liberal threshold helps slightly at small $n$), while the BIC pretest is worst at small $n$ (overhead up to $24\%$): because BIC almost never selects the full model, it behaves like always-reduced and inherits its bias at high $\CV$.
 
-\subsection{Discussion}
+\subsection{Why the pretest is nearly costless at $n \geq 500$}
 
-The adaptive procedure succeeds because of the bias-detectability alignment (Figure~\ref{fig:alignment}): the LRT has low power precisely where the consequence of misspecification is small, and high power where the consequence is large. The ``incorrect'' selections at moderate CV carry negligible penalty because the reduced model's bias is still below 1\% at those CVs. Since both fits are already required to compute $\Lambda$, the procedure adds no cost.
+The decoupling explains the pattern directly. Where the pretest's ``wrong'' choices occur (moderate $\CV$, where the test lacks power) the reduced model's bias is still small by Corollary~\ref{cor:bias}, so misselection is cheap; where the bias is large the test has ample power to switch. The risk hump survives only at $n=100$, where neither regime of the two-regime rule has fully taken hold. Since both fits are already computed to form $\Lambda$, the pretest adds no estimation cost, and at $n \geq 500$ it is within $2.5\%$ of always knowing the right model.
 
 %% =========================================================================
 \section{Conclusion}
 \label{sec:conclusion}
 
-This paper addressed a fundamental question in reliability engineering: when can practitioners safely simplify a Weibull series system model by assuming common component shapes? The answer is structured around a quantitative alignment between prediction consequence and statistical detectability.
+We asked when a reliability engineer can safely simplify a Weibull series model to a common shape, and answered it structurally. Misspecification consequence and statistical detectability are decoupled: the reduced model's prediction bias is a sample-size-independent population quantity, $O(\CV^2)$ with coefficient $\approx 0.28$, while the likelihood ratio test's detectability scales as $\approx 0.5\,n\,\CV^2$, so the detectable threshold falls as $3.5/\sqrt{n}$. A single conjugacy identity drives both halves: at any common-shape point the constraint is invisible to first order for system-level prediction, which forces the bias to be second-order in heterogeneity and shows that the common-shape constraint provides zero first-order variance gain. The latter explains a finding that contradicts the parsimony-reduces-variance intuition: at moderate sample sizes the full model has lower MTTF MSE than the reduced model even when the common shape is exactly correct.
 
-\paragraph{The LRT's power outpaces the reduced model's prediction bias.}
-The common-shape model's MTTF bias remains below 1\% through CV $\approx 15\%$, and by the time it reaches 1.5\% (CV $\approx 20\%$) the LRT already rejects at nearly 80\%. The test lacks power precisely where misspecification is harmless, and has high power precisely where the bias warrants switching to the full model. An adaptive LRT-based procedure exploits this alignment, achieving RMSE within 2.5\% of the always-full strategy at $n \geq 500$ while selecting the simpler model over 90\% of the time when the data support it.
+For practice this yields a two-regime safety rule. For $n \gtrsim 1000$ the LRT rejects the reduced model before its bias becomes engineering-significant; for $n \lesssim 500$ the specification bias is dominated by sampling error, so the choice is second order. The natural pretest procedure inherits this: it is within $2.5\%$ of the better static strategy for $n \geq 500$, with a residual risk hump at $n = 100$ that is the classical pretest phenomenon, not a defect of the masked-data setting. The case for the common-shape model rests on Weibull closure and engineering-adequate predictions, never on statistical efficiency.
 
-\paragraph{The traditional argument for the reduced model does not hold.}
-At moderate sample sizes ($n \leq 1000$), the full model has lower MTTF variance even at CV $= 0$; the case for the common-shape model rests on interpretability, Weibull closure, and engineering-adequate predictions across a broad range of shape heterogeneity.
+\paragraph{Limitations.} Our calibrated constants ($c_B \approx 0.28$, $c_D \approx 0.5$, $\CV_{50}\approx 3.5/\sqrt{n}$) are derived for the baseline 5-component system with equally spaced shapes; the scaling laws ($O(\CV^2)$, $O(n\CV^2)$) and the zero-gain proposition hold generally, but the coefficients should be recomputed for a given system from the formulas of Section~\ref{sec:theory}. Real systems may exhibit clustered or asymmetric heterogeneity rather than the symmetric spread studied here. The masked-case proof of Proposition~\ref{prop:conjugacy} is reduced to four block proportionalities verified numerically; a fully analytic masked-data proof is left open.
 
-\paragraph{Limitations.}
-Our simulations use uniformly spaced shapes about a common mean. Real systems may exhibit asymmetric or clustered heterogeneity patterns. The single baseline system (5 components, moderate masking and censoring) may not capture all configurations of practical interest.
-
-\paragraph{Future directions.}
-Extending to non-Weibull distributions (where analogous closure properties may or may not hold) and to parallel or $k$-out-of-$n$ configurations would broaden applicability.
+\paragraph{Future directions.} Extending the decoupling to non-Weibull families (where closure may fail), to $k$-out-of-$m$ systems, and to the focused-information-criterion machinery under fixed rather than local misspecification would broaden the reach of the structural result.
 
 \appendix
+
+\section{Simulation Details}
+\label{app:sim}
+
+All fits use L-BFGS-B \citep{byrd1995} with analytic gradients. Full-model fits use \texttt{parscale} equal to the parameter vector; reduced-model fits add a Nelder--Mead polishing step from the L-BFGS-B solution because the common-shape likelihood surface is mildly multimodal at high heterogeneity. Non-convergent full-model fits and the rare replications with $\Lambda < 0$ (an optimizer-failure indicator) are excluded: fewer than $3/500$ per condition near $\CV = 0$, rising to about $13/500$ at $\CV \approx 41\%$, so the headline results (which live at $\CV \leq 27\%$) are essentially unaffected. The population specification bias of Table~\ref{tab:consequence} and Figure~\ref{fig:popbias} is computed without simulation, by minimizing the expected reduced-model negative log-likelihood (a deterministic integral under the true masking and censoring law) over the reduced parameters and evaluating the resulting MTTF; this gives the exact $n\to\infty$ pseudo-true bias and isolates specification from estimation error.
 
 \section{Data Quality Effects on LRT Power}
 \label{app:data-quality}
 
-We varied masking probability ($p$), censoring quantile ($q$), and number of components ($m$) for the baseline system (CV $\approx 4\%$). Table~\ref{tab:data-quality} summarizes the effects at $n = 5000$. Masking has the largest impact ($6\times$ power reduction from $p = 0.05$ to $p = 0.70$), followed by censoring ($2.5\times$). Larger systems have lower power due to higher critical values and failure information distributed across more parameters. Importantly, no factor inflates the Type~I error rate---the test remains well-calibrated throughout.
+We varied masking probability $p$, censoring quantile $q$, and component count $m$ for the baseline system (Table~\ref{tab:data-quality}, $n = 5000$). Masking has the largest effect, censoring the next, and larger systems have lower power (failure information is spread across more parameters and the critical value grows). No factor inflates Type I error.
 
 \begin{table}[htbp]
 \centering
-\caption{Effect of Data Quality Factors on LRT Power ($n = 5000$, Baseline System)}
+\caption{Effect of Data Quality on LRT Power ($n = 5000$, Baseline)}
 \label{tab:data-quality}
 \small
 \begin{tabular}{llcc}
 \hline
 Factor & Range & Power Range & Effect \\
 \hline
-Masking $p$ & 0.05--0.70 & 48\% $\to$ 8\% & $6\times$ reduction \\
-Censoring $q$ & 0.50--1.00 & 17\% $\to$ 43\% & $2.5\times$ increase \\
-Components $m$ & 2--8 & 77\% $\to$ 16\% & $5\times$ reduction \\
+Masking $p$ & 0.05--0.70 & $48\% \to 8\%$ & $6\times$ reduction \\
+Censoring $q$ & 0.50--1.00 & $17\% \to 43\%$ & $2.5\times$ increase \\
+Components $m$ & 2--8 & $77\% \to 16\%$ & $5\times$ reduction \\
 \hline
 \end{tabular}
 \end{table}
@@ -333,14 +425,21 @@ Components $m$ & 2--8 & 77\% $\to$ 16\% & $5\times$ reduction \\
 \section{Comparison with Information Criteria}
 \label{app:aic-bic}
 
-Figure~\ref{fig:lrt-vs-aic-bic} compares the LRT with AIC \cite{akaike1974} and BIC \cite{schwarz1978}. Under perfect homogeneity (CV $= 0$), the LRT is well-calibrated (4.6--6.8\%), AIC is liberal (8.2--12.4\%, with false positive rate increasing with $n$ because its fixed penalty does not scale), and BIC is over-conservative (${\leq}\,0.2\%$), making it unsuitable for detecting the subtle heterogeneity characteristic of well-designed systems.
+Figure~\ref{fig:lrt-vs-aic-bic} compares the LRT with AIC \citep{akaike1974} and BIC \citep{schwarz1978} as selectors. Under $\CV = 0$ the LRT is well calibrated ($4.6$ to $6.8\%$); AIC is liberal ($8.2$ to $12.4\%$), and because its penalty does not grow with $n$ its false-positive rate does not vanish but converges to $\Pr(\chi^2_{m-1} > 2(m-1)) = 9.2\%$ for $m=5$; BIC is over-conservative ($\leq 0.2\%$), unsuitable for detecting the subtle heterogeneity of a well-designed system. This is consistent with the pretest comparison of Section~\ref{sec:adaptive}, where BIC's reluctance to select the full model makes it behave like the always-reduced strategy.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.85\textwidth]{image/lrt_vs_aic_bic_divergence.pdf}
-\caption{Model selection rates for LRT ($\alpha = 0.05$), AIC, and BIC vs shape CV.}
+\caption{Model selection rates for LRT ($\alpha = 0.05$), AIC, and BIC versus shape CV.}
 \label{fig:lrt-vs-aic-bic}
 \end{figure}
+
+\section{Proof of the Conjugacy Identity}
+\label{app:proof}
+
+\paragraph{Complete data.} At the common-shape point, with $W = T^k \sim \mathrm{Exponential}(s)$ and failed component $J$ independent of $W$ with $\Pr(J=l) = \eta_l/s$, the complete-data scores are $\partial \ell/\partial \eta_l = \mathbf{1}\{l = J\}/\eta_l - t^k$ and $\partial \ell/\partial k_l = k^{-1}[(1 + \log W)\mathbf{1}\{l=J\} - \eta_l W \log W]$. Taking expectations of the score outer products gives the blocks quoted in the proof sketch of Section~\ref{sec:theory}, with $c_1 = (1 + \mathbb{E}\log W)/s$, $\kappa = \mathbb{E}[W^2\log W] - (2\mathbb{E}[W\log W] + \mathbb{E}[W])/s$, $e_2 = \mathbb{E}[(1+\log W)^2]$, and $\psi = \mathbb{E}[W^2(\log W)^2] - 2\mathbb{E}[(1+\log W)W\log W]/s$. Writing $\nabla g = (c_\eta \v 1, c_k \v\eta)$ and seeking $v = (b\v\eta, a\v 1) \in U$ with $Iv = \nabla g$ reduces, using $\v\eta^\top\v 1 = s$, to a $2\times 2$ linear system in $(a,b)$ that is solvable whenever the scalar $D = (e_2/s + \psi s) - s(c_1 + \kappa s)^2$ is nonzero (equivalently, $I$ is nonsingular on the relevant subspace). The unique solution has constant $k$-block $a\v 1$, proving $I^{-1}\nabla g \in V$.
+
+\paragraph{Masked and censored data.} The gradient structure $\nabla g = (c_\eta\v 1, c_k\v\eta)$ is unchanged, since $g$ remains a functional of the system law. The proof needs only that $I$ map $U$ into $P$, i.e.\ the four proportionalities $I_{\eta\eta}\v\eta \propto \v 1$, $I_{k\eta}\v\eta \propto \v\eta$, $I_{\eta k}\v 1 \propto \v 1$, $I_{kk}\v 1 \propto \v\eta$. We verified these for the baseline design ($p = 0.215$, $q = 0.825$, $m=5$) by Monte Carlo, computing $I$ from $3\times 10^6$ simulated masked, censored observations: the relative deviations from proportionality are at the $5\times 10^{-4}$ Monte Carlo floor, and the end-to-end first-order variance gain for MTTF and $R(t)$ is below $10^{-5}$. A fully analytic treatment requires propagating the candidate-set averaging through the block expectations and is left open.
 
 \bibliographystyle{IEEEtranN}
 \bibliography{refs}
