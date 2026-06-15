@@ -106,16 +106,16 @@ Standard distribution with `amsmath`, `amsthm`, `graphicx`, `natbib`, `hyperref`
 
 ## Related Work
 
-- [Towell (2023). *Reliability Estimation in Series Systems with Masked Data*](https://github.com/queelius/reliability-estimation-in-series-systems) -- the C1-C2-C3 likelihood framework
+- Towell (2025). *Masked Causes of Failure in Series Systems: A Likelihood Framework*. [DOI:10.5281/zenodo.18725577](https://doi.org/10.5281/zenodo.18725577) -- the C1-C2-C3 likelihood framework this paper builds on
 - [`wei.series.md.c1.c2.c3`](https://github.com/queelius/wei.series.md.c1.c2.c3) -- R package implementing the parametric models
 
 ## Citation
 
 ```bibtex
-@article{towell2025consequence,
-  title={When Does Model Simplification Matter? Consequence Analysis for Weibull Series Systems},
+@article{towell2026consequence,
+  title={When Is Model Simplification Safe? Consequence and Detectability for Common-Shape Weibull Series Systems under Masked Data},
   author={Towell, Alexander},
-  year={2025},
+  year={2026},
   note={Preprint},
   url={https://github.com/queelius/weibull-series-consequence}
 }
@@ -123,7 +123,7 @@ Standard distribution with `amsmath`, `amsthm`, `graphicx`, `natbib`, `hyperref`
 
 ## License
 
-MIT License -- see the LICENSE file for details.
+Creative Commons Attribution 4.0 International (CC-BY-4.0).
 
 ## Author
 

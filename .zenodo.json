@@ -1,0 +1,41 @@
+{
+  "title": "When Is Model Simplification Safe? Consequence and Detectability for Common-Shape Weibull Series Systems under Masked Data",
+  "upload_type": "publication",
+  "publication_type": "preprint",
+  "description": "<p>A reliability engineer modeling a Weibull series system must choose between a full model with a separate shape parameter for each component and a parsimonious reduced model that assumes a common shape. We show that the two questions a practitioner cares about, how much accuracy the simplification costs and whether the data can detect that it is wrong, are structurally decoupled. The reduced model's prediction bias is a sample-size-independent population quantity that grows quadratically in the shape coefficient of variation, while the likelihood ratio test's detection power scales with the sample size times that quantity, so the smallest detectable heterogeneity falls as one over the square root of the sample size.</p><p>We prove a conjugacy identity: at any common-shape point, the common-shape constraint yields exactly zero first-order efficiency gain for any functional of the system lifetime distribution (mean time-to-failure, reliability, quantiles). The same identity forces the misspecification bias to be second-order in heterogeneity (no linear term) and explains a counterintuitive finding, that at moderate sample sizes the full model can have lower mean time-to-failure mean squared error than the reduced model even when the common shape is exactly correct. The practical consequence is a two-regime safety rule, established under right-censored and masked failure data satisfying the standard conditions of the masked-data likelihood framework.</p>",
+  "version": "2.0.0",
+  "license": {
+    "id": "CC-BY-4.0"
+  },
+  "keywords": [
+    "reliability",
+    "series systems",
+    "masked data",
+    "Weibull distribution",
+    "model selection",
+    "likelihood ratio test",
+    "model misspecification",
+    "focused information criterion",
+    "pretest estimation",
+    "constrained maximum likelihood"
+  ],
+  "creators": [
+    {
+      "name": "Towell, Alexander",
+      "orcid": "0000-0001-6443-9897",
+      "affiliation": "Southern Illinois University Edwardsville"
+    }
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/queelius/weibull-series-consequence",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    },
+    {
+      "identifier": "10.5281/zenodo.18725577",
+      "relation": "isDerivedFrom",
+      "scheme": "doi"
+    }
+  ]
+}

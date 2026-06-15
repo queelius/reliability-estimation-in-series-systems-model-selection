@@ -1,0 +1,44 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+type: article
+title: "When Is Model Simplification Safe? Consequence and Detectability for Common-Shape Weibull Series Systems under Masked Data"
+authors:
+  - family-names: Towell
+    given-names: Alexander
+    email: lex@metafunctor.com
+    orcid: "https://orcid.org/0000-0001-6443-9897"
+    affiliation: "Southern Illinois University Edwardsville"
+abstract: >-
+  A reliability engineer modeling a Weibull series system must choose between
+  a full model with a separate shape parameter for each component and a
+  parsimonious reduced model that assumes a common shape. We show that the two
+  questions a practitioner cares about, how much accuracy the simplification
+  costs and whether the data can detect that it is wrong, are structurally
+  decoupled. The reduced model's prediction bias is a sample-size-independent
+  population quantity that grows as the square of the shape coefficient of
+  variation, while the likelihood ratio test's detection power is governed by
+  a noncentrality parameter that scales with the sample size times the same
+  quantity, so the detectable threshold falls as one over the square root of
+  the sample size. We prove a conjugacy identity: at any common-shape point
+  the common-shape constraint yields exactly zero first-order efficiency gain
+  for any functional of the system lifetime distribution. The identity forces
+  the misspecification bias to be second-order in heterogeneity and explains
+  why, at moderate sample sizes, the full model can have lower mean
+  time-to-failure mean squared error than the reduced model even when the
+  common shape is exactly correct. The practical result is a two-regime safety
+  rule, derived under right-censored and masked failure data.
+keywords:
+  - reliability
+  - series systems
+  - masked data
+  - Weibull distribution
+  - model selection
+  - likelihood ratio test
+  - model misspecification
+  - focused information criterion
+  - pretest estimation
+  - constrained maximum likelihood
+license: CC-BY-4.0
+version: "2.0.0"
+date-released: "2026-06-14"
+repository-code: "https://github.com/queelius/weibull-series-consequence"
