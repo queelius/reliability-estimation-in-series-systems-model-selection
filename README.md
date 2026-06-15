@@ -1,10 +1,12 @@
-# When Does Model Simplification Matter?
+# When Is Model Simplification Safe?
 
-**Consequence Analysis for Weibull Series Systems**
+**Consequence and Detectability for Common-Shape Weibull Series Systems under Masked Data**
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20701989.svg)](https://doi.org/10.5281/zenodo.20701989)
 
 [Read the paper (PDF)](https://queelius.github.io/weibull-series-consequence/paper.pdf)
 
-When a reliability engineer simplifies a series system model by assuming all components share a common Weibull shape parameter, how much accuracy is lost -- and can the data even tell the difference? This paper shows these two questions have a quantitatively aligned answer.
+When a reliability engineer simplifies a series system model by assuming all components share a common Weibull shape parameter, how much accuracy is lost, and can the data even tell the difference? This paper shows the two questions are structurally decoupled: the reduced model's prediction bias is sample-size independent and grows as the square of the shape coefficient of variation, while the likelihood ratio test's detection power scales with the sample size, so the detectable threshold shrinks as one over the square root of the sample size. A single conjugacy identity drives both halves and shows the common-shape constraint buys zero first-order efficiency for system-level prediction.
 
 ## Key Findings
 
@@ -117,7 +119,8 @@ Standard distribution with `amsmath`, `amsthm`, `graphicx`, `natbib`, `hyperref`
   author={Towell, Alexander},
   year={2026},
   note={Preprint},
-  url={https://github.com/queelius/weibull-series-consequence}
+  doi={10.5281/zenodo.20701990},
+  url={https://doi.org/10.5281/zenodo.20701990}
 }
 ```
 
